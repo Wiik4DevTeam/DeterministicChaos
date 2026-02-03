@@ -107,32 +107,8 @@ namespace DeterministicChaos.Content.SoulTraits
 
         public override void SetStaticDefaults()
         {
-            InitializeVanillaPotionInvestments();
+            
         }
-
-        private static void InitializeVanillaPotionInvestments()
-        {
-            // Basic potions: 1 point
-            PotionInvestmentValues[ItemID.IronskinPotion] = 1;
-            PotionInvestmentValues[ItemID.RegenerationPotion] = 1;
-            PotionInvestmentValues[ItemID.SwiftnessPotion] = 1;
-            PotionInvestmentValues[ItemID.ArcheryPotion] = 1;
-
-            // Mid-tier potions: 2 points
-            PotionInvestmentValues[ItemID.MagicPowerPotion] = 2;
-            PotionInvestmentValues[ItemID.ThornsPotion] = 2;
-            PotionInvestmentValues[ItemID.HeartreachPotion] = 2;
-
-            // High-tier potions: 3 points
-            PotionInvestmentValues[ItemID.EndurancePotion] = 3;
-            PotionInvestmentValues[ItemID.LifeforcePotion] = 3;
-            PotionInvestmentValues[ItemID.RagePotion] = 3;
-            PotionInvestmentValues[ItemID.WrathPotion] = 3;
-            PotionInvestmentValues[ItemID.InfernoPotion] = 3;
-            PotionInvestmentValues[ItemID.TitanPotion] = 3;
-            PotionInvestmentValues[ItemID.SummoningPotion] = 3;
-        }
-
         public static void RegisterPotionInvestment(int itemID, int investmentPoints)
         {
             PotionInvestmentValues[itemID] = investmentPoints;

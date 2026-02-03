@@ -13,10 +13,9 @@ namespace DeterministicChaos.Content.SoulTraits
 
         public override void SetStaticDefaults()
         {
-            // Initialize default investment values for vanilla items
-            InitializeVanillaInvestments();
+            
         }
-        
+
         public static void RegisterArmorInvestment(int itemID, int investmentPoints)
         {
             ArmorInvestmentValues[itemID] = investmentPoints;
