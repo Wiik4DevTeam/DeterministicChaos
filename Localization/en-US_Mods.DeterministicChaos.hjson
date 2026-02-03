@@ -1,0 +1,573 @@
+NPCs: {
+	RoaringKnight.DisplayName: Roaring Knight
+	RoaringKnightSphere.DisplayName: Roaring Knight Sphere
+	FakeEyeOfCthulhu.DisplayName: Fake Eye Of Cthulhu
+	RoaringKnightCutscene.DisplayName: Roaring Knight Cutscene
+	ERAM.DisplayName: E R A M
+	PixelFriend.DisplayName: Pixel Friend
+	DarkWorldEye.DisplayName: Dark World Eye
+	DarkWorldSlime.DisplayName: Dark World Slime
+
+	Gerson: {
+		DisplayName: Gerson
+
+		TownNPCMood: {
+			Content: I am content.
+			NoHome: I hate not having a home.
+			FarFromHome: I am too far from home.
+			LoveSpace: I love having so much space.
+			DislikeCrowded: I dislike how crowded I am.
+			HateCrowded: I hate how crowded I am.
+			LoveBiome: I love {BiomeName}.
+			LikeBiome: I like {BiomeName}.
+			DislikeBiome: I dislike {BiomeName}.
+			LoveNPC: I love {NPCName}.
+			LikeNPC: I like {NPCName}.
+			DislikeNPC: I dislike {NPCName}.
+			LikeNPC_Princess: I like {NPCName}.
+			Princess_LovesNPC: I like {NPCName}.
+		}
+	}
+}
+
+Bestiary.Gerson: An ancient tortoise who has already completed his journey. He offers guidance to those seeking to understand their inner nature.
+
+Dialogue: {
+	Gerson: {
+		NoTrait1: Gya ha ha! I see you have not yet discovered your soul trait. Care to choose? Or perhaps you're looking to challenge yourself?
+		NoTrait2: Every soul has a trait that defines them. What might yours be, I wonder?
+		NoTrait3: The soul is a curious thing. Let me help you find yours.
+		HasTrait1: Ah, I see your soul shines bright. But remember, you can always change your path... until the next chapter.
+		HasTrait2: Your soul trait serves you well! Or perhaps you wish to try another?
+		Locked1: The next chapter has arrived, and your story has begun. Your trait is now set in stone.
+		Locked2: Once the next chapter has arrived, there is no going back. Your soul has chosen its path.
+		General1: My story has come to it's end. Now, it's your turn!
+		General2: You want me to help you fight? Nah, that would be too easy for you!
+		ChooseTrait: Soul Traits
+		ViewTrait: View Trait
+		TraitInfo: Your soul radiates with {0}. This path is now permanent.
+	}
+}
+
+Buffs: {
+	SoulTraitInvestmentBuff1: {
+		DisplayName: Minor Soul Investment
+		Description: +1 Soul Trait investment point
+	}
+
+	SoulTraitInvestmentBuff2: {
+		DisplayName: Lesser Soul Investment
+		Description: +2 Soul Trait investment points
+	}
+
+	SoulTraitInvestmentBuff3: {
+		DisplayName: Soul Investment
+		Description: +3 Soul Trait investment points
+	}
+
+	SoulTraitInvestmentBuff4: {
+		DisplayName: Greater Soul Investment
+		Description: +4 Soul Trait investment points
+	}
+
+	SoulTraitInvestmentBuff5: {
+		DisplayName: Major Soul Investment
+		Description: +5 Soul Trait investment points
+	}
+
+	JusticeMarkBuff: {
+		DisplayName: Justice Mark
+		Description: Your next hit is guaranteed to critically strike.
+	}
+
+	KindnessDefenseBuff: {
+		DisplayName: Kindness Shield
+		Description: +6 defense from protecting allies.
+	}
+
+	KindnessMarkBuff: {
+		DisplayName: Kindness Mark
+		Description: +25% damage in honor of a fallen ally.
+	}
+
+	BraveryMarkBuff: {
+		DisplayName: Bravery Mark
+		Description: Increased attack speed based on enemy proximity.
+	}
+
+	BraveryDamageBuff: {
+		DisplayName: Bravery Fury
+		Description: +12% damage after taking damage.
+	}
+
+	PatienceMarkBuff: {
+		DisplayName: Patience Mark
+		Description: The next hit will deal 50% less damage.
+	}
+
+	IntegrityMarkBuff: {
+		DisplayName: Integrity Mark
+		Description: Your next critical strike deals bonus damage. Stacks up to 3 times.
+	}
+
+	PerseveranceMarkBuff: {
+		DisplayName: Perseverance Mark
+		Description: Your next hit adds Defense to armor penetration.
+	}
+
+	PerseveranceDamageBuff: {
+		DisplayName: Perseverance Stacks
+		Description: +5% damage per stack after taking damage.
+	}
+
+	DeterminationMarkBuff: {
+		DisplayName: Determination Mark
+		Description: You will revive at your saved position upon death.
+	}
+
+	DeterminationCooldownBuff: {
+		DisplayName: Determination Cooldown
+		Description: Cannot activate Determination Mark.
+	}
+
+	EyeDebuff: {
+		DisplayName: Eye Debuff
+		Description: Mods.DeterministicChaos.Buffs.EyeDebuff.Description
+	}
+
+	RoaringGunBuff: {
+		DisplayName: Roaring Gun Buff
+		Description: Mods.DeterministicChaos.Buffs.RoaringGunBuff.Description
+	}
+
+	RoaringSummonBuff: {
+		DisplayName: Roaring Summon Buff
+		Description: Mods.DeterministicChaos.Buffs.RoaringSummonBuff.Description
+	}
+}
+
+Projectiles: {
+	Projectile_Seeking.DisplayName: Projectile_ Seeking
+	Projectile_Star.DisplayName: Projectile_ Star
+	SlashAttack.DisplayName: Slash Attack
+	SlashIndicator.DisplayName: Slash Indicator
+	SliceIndicator.DisplayName: Slice Indicator
+	ToothProjectile.DisplayName: Tooth Projectile
+	SeekingKnife.DisplayName: Seeking Knife
+	LatticeKnife.DisplayName: Lattice Knife
+	ConeVisualEffect.DisplayName: Cone Visual Effect
+	ShockwaveLine.DisplayName: Shockwave Line
+	Shockwave.DisplayName: Shockwave
+	KnightLaugh.DisplayName: Knight Laugh
+	FireSphere.DisplayName: Fire Sphere
+	FireTrail.DisplayName: Fire Trail
+	PixelBomb.DisplayName: Pixel Bomb
+	PixelWave.DisplayName: Pixel Wave
+	RoaringMiniStar.DisplayName: Roaring Mini Star
+	RoaringYoyoProjectile.DisplayName: Roaring Yoyo Projectile
+	DarkShardProjectile.DisplayName: Dark Shard Projectile
+	DarkShardSeeker.DisplayName: Dark Shard Seeker
+	RoaringArrowProjectile.DisplayName: Roaring Arrow Projectile
+	RoaringBulletProjectile.DisplayName: Roaring Bullet Projectile
+	RoaringTomeStarProjectile.DisplayName: Roaring Tome Star
+	RoaringTomeBigProjectile.DisplayName: Roaring Tome Orb
+	RoaringSwordSwing.DisplayName: Roaring Sword
+	RoaringSwordLunge.DisplayName: Roaring Lunge
+	RoaringSwordSlash.DisplayName: Roaring Slash
+	RoaringSwordHomingSlash.DisplayName: Roaring Sword Homing Slash
+	RoaringSwordChainLunge.DisplayName: Roaring Sword Chain Lunge
+	RoaringSwordChainSlash.DisplayName: Roaring Sword Chain Slash
+	RoaringSwordLungeCharge.DisplayName: Roaring Sword Lunge Charge
+	RoaringWhipProjectile.DisplayName: Roaring Whip
+	RoaringSummonProjectile.DisplayName: Shadow Clone
+	RoaringSummonWhipAttack.DisplayName: Shadow Whip
+	RoaringWhipSlash.DisplayName: Whip Slash
+	RoaringWhipSlashAttack.DisplayName: Whip Slash Attack
+	RogueSeekingKnife.DisplayName: Seeking Knife
+	RogueSlashAttack.DisplayName: Rogue Slash Attack
+	BaseballBatSwing.DisplayName: Baseball Bat Swing
+}
+
+Items: {
+	SoulEssenceT1: {
+		DisplayName: Minor Soul Essence
+		Tooltip: Increases your soul trait investment by 1 for 4 minutes.
+	}
+
+	SoulEssenceT2: {
+		DisplayName: Lesser Soul Essence
+		Tooltip: Increases your soul trait investment by 2 for 4 minutes.
+	}
+
+	SoulEssenceT3: {
+		DisplayName: Soul Essence
+		Tooltip: Increases your soul trait investment by 3 for 4 minutes.
+	}
+
+	SoulEssenceT4: {
+		DisplayName: Greater Soul Essence
+		Tooltip: Increases your soul trait investment by 4 for 4 minutes.
+	}
+
+	SoulEssenceT5: {
+		DisplayName: Major Soul Essence
+		Tooltip: Increases your soul trait investment by 5 for 4 minutes.
+	}
+
+	SuspiciousEye: {
+		DisplayName: Suspicious... Looking Eye?
+		Tooltip: This eye looks a bit more suspicious than usual.
+	}
+
+	ShadowMantle: {
+		DisplayName: Shadow Mantle
+		Tooltip:
+			'''
+			Reduces damage from Dark/Star based attacks by 66%.
+			Increased flight duration by 50%.
+			5% increased damage.
+			'''
+	}
+
+	ERAMSummon: {
+		DisplayName: Game Controller
+		Tooltip: A pink and yellow game controller. Want to play a round?
+	}
+
+	CloudyGlasses: {
+		DisplayName: Cloudy Glasses
+		Tooltip:
+			'''
+			+3 Perseverance investment points.
+			Increases invulnerability frames by 0.3 seconds when hit.
+			'''
+	}
+
+	CowboyHat: {
+		DisplayName: Cowboy Hat
+		Tooltip:
+			'''
+			+3 Justice investment points.
+			Critical hits increase global attack speed by 50% for 0.2 seconds.
+			'''
+	}
+
+	FadedRibbon: {
+		DisplayName: Faded Ribbon
+		Tooltip:
+			'''
+			+3 Patience investment points.
+			While at max health, take 30% decreased damage.
+			'''
+	}
+
+	HeartLocket: {
+		DisplayName: Heart Locket
+		Tooltip:
+			'''
+			+3 Determination investment points.
+			Gain increasing bonuses to all stats as your health gets lower.
+			'''
+	}
+
+	ManlyBandana: {
+		DisplayName: Manly Bandana
+		Tooltip:
+			'''
+			+3 Bravery investment points.
+			Gain increased damage based on your current velocity, up to 10%.
+			'''
+	}
+
+	OldTuTu: {
+		DisplayName: Old TuTu
+		Tooltip:
+			'''
+			+3 Integrity investment points.
+			Allows the user to dash away from enemies.
+			'''
+	}
+
+	StainedApron: {
+		DisplayName: Stained Apron
+		Tooltip:
+			'''
+			+3 Kindness investment points.
+			All healing done to nearby teammates is applied to you as well.
+			'''
+	}
+
+	DarkFragment: {
+		DisplayName: Dark Fragment
+		Tooltip: A shard of condensed darkness, pulsing with latent power.
+	}
+
+	DarkShard: {
+		DisplayName: Dark Shard
+		Tooltip:
+			'''
+			A knife imbued with dark intent.
+			When the knife hits a target, it splits into two shards that seek after a short delay.
+			Right click to channel your will into the blade, and summon forth a Dark Fountain.
+			'''
+	}
+
+	RoaringYoyo: {
+		DisplayName: Static
+		Tooltip:
+			'''
+			A childish form for a volatile substance.
+			Emits Star projectiles in a rotating pattern around the yoyo.
+			'''
+	}
+
+	RoaringBow: {
+		DisplayName: Immutable
+		Tooltip:
+			'''
+			A wicked bow, broken from battle.
+			Fires two arrows in a V shaped pattern.
+			'''
+	}
+
+	RoaringArrow: {
+		DisplayName: Dark Arrow
+		Tooltip:
+			'''
+			A projectile that defies time and space.
+			Pauses briefly before dashing forward at high speed.
+			'''
+	}
+
+	RoaringGun: {
+		DisplayName: Dissonance
+		Tooltip:
+			'''
+			A firearm that's hollow of spirit and meaning.
+			Fire rate increases on hit, decreases on miss.
+			Max 20 stacks.
+			'''
+	}
+
+	RoaringSword: {
+		DisplayName: Willbreaker
+		Tooltip:
+			'''
+			With this blade, I deliver finality.
+			Marks enemies with an Eye of Judgment on hit.
+			At 5 marks, lunge attacks deal triple damage and always crit.
+			Hold down right click to charge up a lunge. Release to lunge forward and attack enemies.
+			Lunges will continue to chain onto Marked enemies until the attack misses.
+			'''
+	}
+
+	RoaringBullet: {
+		DisplayName: Dark Bullet
+		Tooltip:
+			'''
+			A shell that hungers for violence.
+			Attaches to enemies on hit.
+			When 10 bullets attach within 2 seconds, they explode.
+			'''
+	}
+
+	RoaringTome: {
+		DisplayName: Clarity
+		Tooltip:
+			'''
+			A book with no knowledge to gleam, but consequence.
+			Fires piercing star projectiles that cost no mana.
+			Right click to release a slow, powerful orb that absorbs stars, at the cost of all your mana.
+			The orb grows in size, speed, and damage with each absorbed star.
+			'''
+	}
+
+	RoaringBreastplate: {
+		DisplayName: Roaring Breastplate
+		Tooltip:
+			'''
+			Roar like the waves crashing against the sea.
+			The user takes no knockback.
+			+40 max life
+			+60 max mana
+			5% damage reduction
+			'''
+	}
+
+	RoaringLeggings: {
+		DisplayName: Roaring Leggings
+		Tooltip:
+			'''
+			A chosen path. A desolate future.
+			+15% movement speed
+			+30% acceleration rate.
+			+5% damage.
+			'''
+	}
+
+	RoaringHelmet: {
+		DisplayName: Roaring Helmet
+		Tooltip:
+			'''
+			Your wrath cuts deeper than the shadows.
+			+10% melee attack speed.
+			'''
+	}
+
+	RoaringMask: {
+		DisplayName: Roaring Mask
+		Tooltip:
+			'''
+			A mask that sharpens a hunter's gaze.
+			+12% ranged critical strike chance
+			+12% ranged damage.
+			'''
+	}
+
+	RoaringHood: {
+		DisplayName: Roaring Hood
+		Tooltip:
+			'''
+			A hood to hide your darkest intentions.
+			+15% magic damage
+			+20% mana recharge rate.
+			'''
+	}
+
+	RoaringHeadpiece: {
+		DisplayName: Roaring Headpiece
+		Tooltip:
+			'''
+			The shadows are yours to command.
+			+15% whip speed
+			+10% whip damage
+			'''
+	}
+
+	RoaringCowl: {
+		DisplayName: Roaring Cowl
+		Tooltip:
+			'''
+			Embrace the darkness, and become the shadows.
+			+8% critical strike chance
+			+15% rogue damage
+			'''
+	}
+
+	RoaringWhip: {
+		DisplayName: Gnomon
+		Tooltip:
+			'''
+			Bend your foes to your will.
+			Your summons focus struck enemies.
+			Whip hits summon a rotating slash attack centered around the target struck.
+			Umbral clones also gain this ability while using this whip.
+			'''
+	}
+
+	RoaringSummon: {
+		DisplayName: Silhouette
+		Tooltip:
+			'''
+			Your shadow given form.
+			Summons an Umbral clone that mirrors your movement around whip-marked targets.
+			Multiple clones form strategic patterns around enemies.
+			Clones will mirror all player whip attacks.
+			'''
+	}
+
+	TitanForgeItem: {
+		Tooltip: ""
+		DisplayName: Titan Forge
+	}
+
+	BaseballBat: {
+		DisplayName: Baseball Bat
+		Tooltip: Raise up your bat for the burning fight!
+	}
+}
+
+Tiles: {
+	DarkPortal.MapEntry: Dark Portal
+	TitanForge.MapEntry: Titan Forge
+}
+
+SoulTraits: {
+	Justice: {
+		Name: JUSTICE
+		Description: A soul that seeks fairness and truth.
+		Bonus3: Gain a built-in triple jump.
+		Bonus5: Increased critical strike chance by 6%.
+		Bonus12: Increased projectile damage by 10%.
+		Bonus20: Every 5 hits, gain a Justice Mark. \nYour next hit is guaranteed to critically strike.
+	}
+
+	Kindness: {
+		Name: KINDNESS
+		Description: A soul that nurtures and protects.
+		Bonus3: +2 life regeneration to you and nearby allies.
+		Bonus5: When you or nearby allies take damage, increase your defense by +6 for 3 seconds.
+		Bonus12: Potion effects are applied to nearby allies. +20% potion effect duration.
+		Bonus20: When you or an ally dies, you and each ally gain a Kindness Mark. Increases total damage by 25% for 10 seconds.
+	}
+
+	Bravery: {
+		Name: BRAVERY
+		Description: A soul that charges forward without fear.
+		Bonus3: +10% global damage to enemies within 10 tiles. Take 5% increased damage.
+		Bonus5: +20% move speed while in combat.
+		Bonus12: Taking damage increases damage dealt by 12% for 6 seconds.
+		Bonus20: After dealing damage, gain a Bravery Mark. Increases global attack speed up to 20% based on enemy proximity.
+	}
+
+	Patience: {
+		Name: PATIENCE
+		Description: A soul that waits for the perfect moment.
+		Bonus3: Enemies are less likely to target you.
+		Bonus5: Gain double life regen speed while not moving.
+		Bonus12: Gain access to Rogue Stealth. If you already have Rogue Stealth, increases maximum by 30.
+		Bonus20: Every 30 seconds without taking damage, gain a Patience Mark. The next hit consumes the stack to reduce damage by 50%.
+	}
+
+	Integrity: {
+		Name: INTEGRITY
+		Description: A soul that stays true to one's self.
+		Bonus3: Increased global critical strike damage by 15%. Decreased critical strike chance by 10%.
+		Bonus5: Increased global attack speed by 15%. Decreased attack damage by 10%.
+		Bonus12: Removes all negative effects from previous investment bonuses.
+		Bonus20: After dealing damage, gain an Integrity Mark. Your next critical strike will deal increased damage.
+	}
+
+	Perseverance: {
+		Name: PERSEVERANCE
+		Description: A soul that endures through hardship.
+		Bonus3: +20% increased defense. -10% total damage dealt.
+		Bonus5: Taking damage increases your damage dealt by 5%. Lasts 5 seconds, stacks up to 5 times.
+		Bonus12: When a nearby ally takes damage, they take 50% less damage, and you take 50% of the damage.
+		Bonus20: After taking damage, gain a Perseverance Mark. Your next hit will add your Defense to your armor penetration.
+	}
+
+	Determination: {
+		Name: DETERMINATION
+		Description: A soul that refuses to give up.
+		Bonus3: Reduced respawn time by 5 seconds.
+		Bonus5: 6% increased global damage.
+		Bonus12: Increased immunity frames when taking damage.
+		Bonus20: At 50% health, gain a Determination Mark and store your position. On death, revive at half health and return to that position. 2 minute cooldown.
+	}
+
+	UI: {
+		NoTrait: No Soul Trait
+		VisitGerson: Visit Gerson to obtain a Soul Trait
+		Locked: "[Locked - Hardmode]"
+		InvestmentPoints: Investment Points: {0}/20
+		Breakdown: (Armor: {0} | Weapon: {1} | Potion: {2})
+		Active: "[Active]"
+		Points: "[{0} pts]"
+	}
+
+	TitanForgeItem: {
+		DisplayName: Titan Forge
+		Tooltip: A workbench forged from dark energy, used to craft powerful items. Can only be found in a Dark World.
+	}
+}

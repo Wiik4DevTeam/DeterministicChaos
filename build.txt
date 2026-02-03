@@ -1,0 +1,4 @@
+displayName = Deterministic Chaos
+author = Me
+version = 1.12
+modReferences = SubworldLibrary, StructureHelper, CalamityMod
