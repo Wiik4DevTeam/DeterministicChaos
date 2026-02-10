@@ -9,21 +9,18 @@ using ReLogic.Content;
 
 namespace DeterministicChaos.Content.Subworlds
 {
-    /// <summary>
-    /// Applies an inverted color effect when in the Dark World using tModLoader's Filter system.
-    /// </summary>
     public class DarkDimensionScreenEffect : ModSystem
     {
-        public const string FilterName = "DeterministicChaos:DarkDimensionInvert";
+        public const string FilterName = "DeterministicChaos:DarkDimensionBlueShift";
         
         public override void Load()
         {
             if (Main.dedServ)
                 return;
             
-            // Load the shader and register the filter
-            var shaderRef = new Ref<Effect>(ModContent.Request<Effect>("DeterministicChaos/Assets/Effects/InvertColors", AssetRequestMode.ImmediateLoad).Value);
-            Filters.Scene[FilterName] = new Filter(new ScreenShaderData(shaderRef, "InvertPass"), EffectPriority.VeryHigh);
+            // Load the blue shift shader and register the filter
+            var shaderRef = new Ref<Effect>(ModContent.Request<Effect>("DeterministicChaos/Assets/Effects/BlueShift", AssetRequestMode.ImmediateLoad).Value);
+            Filters.Scene[FilterName] = new Filter(new ScreenShaderData(shaderRef, "BlueShiftPass"), EffectPriority.VeryHigh);
             Filters.Scene[FilterName].Load();
         }
 
@@ -38,7 +35,6 @@ namespace DeterministicChaos.Content.Subworlds
             
             if (isInDarkDimension && !Main.gameMenu)
             {
-                // Activate the filter if not already active
                 if (!Filters.Scene[FilterName].IsActive())
                 {
                     Filters.Scene.Activate(FilterName);
@@ -46,7 +42,6 @@ namespace DeterministicChaos.Content.Subworlds
             }
             else
             {
-                // Deactivate if active
                 if (Filters.Scene[FilterName].IsActive())
                 {
                     Filters.Scene.Deactivate(FilterName);
@@ -55,41 +50,32 @@ namespace DeterministicChaos.Content.Subworlds
         }
     }
 
-    /// <summary>
-    /// Handles lighting in the Dark World, subtle ambient glow.
-    /// </summary>
     public class DarkDimensionLighting : GlobalTile
     {
         public override void ModifyLight(int i, int j, int type, ref float r, ref float g, ref float b)
         {
             if (SubworldSystem.IsActive<DarkDimension>())
             {
-                // Low ambient light, inverted this becomes dark with bright highlights
-                r = System.Math.Max(r, 0.15f);
-                g = System.Math.Max(g, 0.15f);
-                b = System.Math.Max(b, 0.15f);
+                // Subtle ambient light with slight blue tint to complement the shader
+                r = System.Math.Max(r, 0.08f);
+                g = System.Math.Max(g, 0.10f);
+                b = System.Math.Max(b, 0.18f);
             }
         }
     }
 
-    /// <summary>
-    /// ModPlayer for Dark World lighting override.
-    /// </summary>
     public class DarkDimensionVisualPlayer : ModPlayer
     {
         public override void PostUpdate()
         {
             if (SubworldSystem.IsActive<DarkDimension>())
             {
-                // Moderate light around player, will invert to darker area around player
-                Lighting.AddLight(Player.Center, 0.4f, 0.4f, 0.4f);
+                // Blue-tinted light around the player
+                Lighting.AddLight(Player.Center, 0.2f, 0.25f, 0.5f);
             }
         }
     }
 
-    /// <summary>
-    /// Scene effect for the Dark World, handles music and forces black background.
-    /// </summary>
     public class DarkDimensionSceneEffect : ModSceneEffect
     {
         public override int Music => MusicLoader.GetMusicSlot(Mod, "Assets/Music/DarkWorld");
@@ -116,9 +102,6 @@ namespace DeterministicChaos.Content.Subworlds
         }
     }
     
-    /// <summary>
-    /// Prevents background drawing in the Dark World.
-    /// </summary>
     public class DarkDimensionBackground : ModSystem
     {
         public override void ModifySunLightColor(ref Color tileColor, ref Color backgroundColor)
@@ -127,7 +110,7 @@ namespace DeterministicChaos.Content.Subworlds
             {
                 // Force pure black background
                 backgroundColor = Color.Black;
-                tileColor = Color.White; // Keep tiles visible
+                tileColor = Color.White;
             }
         }
     }

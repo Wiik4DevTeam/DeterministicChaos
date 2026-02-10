@@ -12,6 +12,7 @@ using Microsoft.Xna.Framework.Graphics;
 using DeterministicChaos.Content.Systems;
 using DeterministicChaos.Content.NPCs.Bosses;
 using DeterministicChaos.Content.SoulTraits;
+using DeterministicChaos.Content.Items;
 
 namespace DeterministicChaos
 {
@@ -19,8 +20,7 @@ namespace DeterministicChaos
 	{
 		public override void Load()
 		{
-			// VHS filter shader - temporarily disabled
-			// Uncomment and add VHSFilter.xnb to enable
+			// VHS filter shader temporarily disabled
 			/*
 			if (!Main.dedServ)
 			{
@@ -63,6 +63,9 @@ namespace DeterministicChaos
 				case 11:
 				case 12:
 					SoulTraitNetworkHandler.HandlePacket(reader, whoAmI);
+					break;
+				case (byte)TornNotebookNetHandler.MessageType.SyncStoredText:
+					TornNotebookNetHandler.HandlePacket(reader, whoAmI);
 					break;
 			}
 		}

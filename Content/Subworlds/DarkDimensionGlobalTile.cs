@@ -4,9 +4,6 @@ using SubworldLibrary;
 
 namespace DeterministicChaos.Content.Subworlds
 {
-    /// <summary>
-    /// GlobalTile to prevent tile breaking in Dark World.
-    /// </summary>
     public class DarkDimensionGlobalTile : GlobalTile
     {
         public override bool CanKillTile(int i, int j, int type, ref bool blockDamaged)

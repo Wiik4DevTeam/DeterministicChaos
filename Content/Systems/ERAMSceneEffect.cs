@@ -6,10 +6,6 @@ using DeterministicChaos.Content.Subworlds;
 
 namespace DeterministicChaos.Content.Systems
 {
-    /// <summary>
-    /// Handles music for the ERAM arena.
-    /// Plays ERAMCutscene during dialogue, ERAM music during the fight.
-    /// </summary>
     public class ERAMSceneEffect : ModSceneEffect
     {
         public override SceneEffectPriority Priority => SceneEffectPriority.BossHigh;

@@ -205,9 +205,6 @@ namespace DeterministicChaos.Content.VFX
                 DepthStencilState.None, Main.Rasterizer, null, Main.GameViewMatrix.TransformationMatrix);
         }
 
-        /// <summary>
-        /// Converts a hue value (0-1) to a rainbow RGB color.
-        /// </summary>
         private static Color HueToColor(float hue)
         {
             float r, g, b;

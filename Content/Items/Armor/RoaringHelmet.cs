@@ -4,6 +4,7 @@ using Terraria;
 using Terraria.DataStructures;
 using Terraria.ID;
 using Terraria.ModLoader;
+using DeterministicChaos.Content.SoulTraits;
 
 namespace DeterministicChaos.Content.Items.Armor
 {
@@ -35,7 +36,7 @@ namespace DeterministicChaos.Content.Items.Armor
 
         public override void UpdateArmorSet(Player player)
         {
-            player.setBonus = "Roaring Fury\n+20% increased sword size\n-80% reduced melee critical strike chance\nCritical strikes deal 3x damage instead of 2x damage and restore 1% max health";
+            player.setBonus = "Roaring Fury\n+5 Soul Investment\n+20% increased sword size\n-80% reduced melee critical strike chance\nCritical strikes deal 3x damage instead of 2x damage and restore 1% max health";
             
             var armorPlayer = player.GetModPlayer<RoaringArmorPlayer>();
             armorPlayer.roaringMeleeSet = true;
@@ -43,6 +44,9 @@ namespace DeterministicChaos.Content.Items.Armor
             
             // Reduce crit chance by 80%
             player.GetCritChance(DamageClass.Melee) -= 80;
+            
+            // +5 Soul Investment from set bonus
+            player.GetModPlayer<SoulTraitPlayer>().ArmorInvestment += 5;
         }
 
         public override void UpdateEquip(Player player)

@@ -40,7 +40,8 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
             Projectile.damage = (int)(Projectile.damage * 0.7f);
             
             // Spawn slash attack on first hit only
-            if (!slashSpawned)
+            // In multiplayer, whip OnHitNPC runs on the owner client
+            if (!slashSpawned && Main.myPlayer == Projectile.owner)
             {
                 SpawnSlashAttack(target);
                 slashSpawned = true;
@@ -49,9 +50,7 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
         
         private void SpawnSlashAttack(NPC target)
         {
-            if (Main.netMode == NetmodeID.MultiplayerClient)
-                return;
-            
+            // Owner client handles spawning, projectile will be synced to other clients
             Player owner = Main.player[Projectile.owner];
             
             // Calculate angle from target to player (line starts facing the player)

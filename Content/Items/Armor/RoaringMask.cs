@@ -4,6 +4,7 @@ using Terraria;
 using Terraria.DataStructures;
 using Terraria.ID;
 using Terraria.ModLoader;
+using DeterministicChaos.Content.SoulTraits;
 
 namespace DeterministicChaos.Content.Items.Armor
 {
@@ -35,9 +36,12 @@ namespace DeterministicChaos.Content.Items.Armor
 
         public override void UpdateArmorSet(Player player)
         {
-            player.setBonus = "Roaring Precision\n+30% arrow and bullet speed\nArrows and bullets ricochet once with +20% damage\nRicochets grant increased fire rate";
+            player.setBonus = "Roaring Precision\n+5 Soul Investment\n+30% arrow and bullet speed\nArrows and bullets ricochet once with +20% damage\nRicochets grant increased fire rate";
             // Enable ranger set effects
             player.GetModPlayer<RoaringArmorPlayer>().roaringRangerSet = true;
+            
+            // +5 Soul Investment from set bonus
+            player.GetModPlayer<SoulTraitPlayer>().ArmorInvestment += 5;
         }
 
         public override void UpdateEquip(Player player)

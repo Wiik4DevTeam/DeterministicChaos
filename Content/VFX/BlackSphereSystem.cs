@@ -52,9 +52,6 @@ namespace DeterministicChaos.Content.VFX
             set => outlineThickness = Math.Max(1f, value);
         }
         
-        /// <summary>
-        /// Interior color brightness. 0 = black (default), 1 = white.
-        /// </summary>
         public static float InteriorBrightness
         {
             get => interiorBrightness;
@@ -92,9 +89,6 @@ namespace DeterministicChaos.Content.VFX
             return id;
         }
 
-        /// <summary>
-        /// Updates an existing sphere's properties.
-        /// </summary>
         public static void UpdateSphere(int id, Vector2? position = null, float? width = null, float? height = null, 
             float? widthPulse = null, float? pulseSpeed = null)
         {

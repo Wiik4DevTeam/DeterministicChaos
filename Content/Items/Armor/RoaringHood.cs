@@ -4,6 +4,7 @@ using Terraria;
 using Terraria.DataStructures;
 using Terraria.ID;
 using Terraria.ModLoader;
+using DeterministicChaos.Content.SoulTraits;
 
 namespace DeterministicChaos.Content.Items.Armor
 {
@@ -35,13 +36,16 @@ namespace DeterministicChaos.Content.Items.Armor
 
         public override void UpdateArmorSet(Player player)
         {
-            player.setBonus = "Roaring Arcana\n+40% magic critical strike chance\n+30% magic fire rate\nGain Mana when you deal less than 10 damage to a target";
+            player.setBonus = "Roaring Arcana\n+5 Soul Investment\n+40% magic critical strike chance\n+30% magic fire rate\nGain Mana when you deal less than 10 damage to a target";
             // Crit chance bonus
             player.GetCritChance(DamageClass.Magic) += 40;
             // Attack speed bonus
             player.GetAttackSpeed(DamageClass.Magic) += 0.30f;
             // Enable mana gain on low damage effect
             player.GetModPlayer<RoaringArmorPlayer>().roaringMageSet = true;
+            
+            // +5 Soul Investment from set bonus
+            player.GetModPlayer<SoulTraitPlayer>().ArmorInvestment += 5;
         }
 
         public override void UpdateEquip(Player player)

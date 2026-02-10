@@ -5,6 +5,7 @@ using Terraria;
 using Terraria.DataStructures;
 using Terraria.ID;
 using Terraria.ModLoader;
+using DeterministicChaos.Content.SoulTraits;
 
 namespace DeterministicChaos.Content.Items.Armor
 {
@@ -36,10 +37,13 @@ namespace DeterministicChaos.Content.Items.Armor
 
         public override void UpdateArmorSet(Player player)
         {
-            player.setBonus = "Roaring Shadow\nReacahing maximum stealth meter grants a rapidly decaying fire rate for 5 seconds\nDark Shard Direct Hits spawn Seeking Knives on hit";
+            player.setBonus = "Roaring Shadow\n+5 Soul Investment\nReaching maximum stealth meter grants a rapidly decaying fire rate for 5 seconds\nDark Shard Direct Hits spawn Seeking Knives on hit";
             // Enable rogue armor for Calamity
             var modPlayer = player.GetModPlayer<RoaringArmorPlayer>();
             modPlayer.roaringRogueSet = true;
+            
+            // +5 Soul Investment from set bonus
+            player.GetModPlayer<SoulTraitPlayer>().ArmorInvestment += 5;
             
             // Try to set Calamity's wearingRogueArmor flag via reflection
             TrySetCalamityRogueArmor(player);

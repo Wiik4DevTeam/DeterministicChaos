@@ -64,7 +64,7 @@ namespace DeterministicChaos.Content.SoulTraits
                 },
                 SoulTraitType.Kindness => new string[]
                 {
-                    "+2 life regeneration to you and nearby allies.",
+                    "+2 life regeneration to you. Heals nearby allies and town NPCs for 2 HP every second.",
                     "When you or nearby allies take damage, increase your defense by +6 for 3 seconds.",
                     "Potion effects are applied to nearby allies. +20% potion effect duration.",
                     "When you or an ally dies, you and each ally gain a Kindness Mark, increasing total damage by 25% for 10 seconds."

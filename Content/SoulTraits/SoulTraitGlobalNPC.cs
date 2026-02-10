@@ -76,6 +76,8 @@ namespace DeterministicChaos.Content.SoulTraits
         private void ShareBuffWithAllies(Player source, int buffType, int buffTime)
         {
             float range = 400f;
+            
+            // Share with nearby players
             for (int i = 0; i < Main.maxPlayers; i++)
             {
                 Player other = Main.player[i];
@@ -89,6 +91,20 @@ namespace DeterministicChaos.Content.SoulTraits
                         {
                             other.AddBuff(buffType, buffTime / 2);
                         }
+                    }
+                }
+            }
+            
+            // Share with nearby friendly NPCs (town NPCs)
+            for (int i = 0; i < Main.maxNPCs; i++)
+            {
+                NPC npc = Main.npc[i];
+                if (npc.active && npc.friendly && npc.townNPC)
+                {
+                    if (Vector2.Distance(source.Center, npc.Center) <= range)
+                    {
+                        // NPCs can have buffs too
+                        npc.AddBuff(buffType, buffTime / 2);
                     }
                 }
             }
@@ -147,15 +163,85 @@ namespace DeterministicChaos.Content.SoulTraits
 
         public override bool? UseItem(Item item, Player player)
         {
+            // Kindness 12 Investment: Share healing potion with nearby allies
+            var traitPlayer = player.GetModPlayer<SoulTraitPlayer>();
+            if (traitPlayer.CurrentTrait == SoulTraitType.Kindness && traitPlayer.TotalInvestment >= 12)
+            {
+                if (item.healLife > 0)
+                {
+                    ShareHealWithAllies(player, item.healLife);
+                }
+                if (item.healMana > 0)
+                {
+                    ShareManaWithAllies(player, item.healMana);
+                }
+            }
+
             // Track potion investment when consumed
             if (PotionInvestmentValues.TryGetValue(item.type, out int investment))
             {
-                var traitPlayer = player.GetModPlayer<SoulTraitPlayer>();
                 // Potion investment is temporary, lasting for the buff duration
                 // This is handled through a buff system instead
             }
 
             return base.UseItem(item, player);
+        }
+
+        private void ShareHealWithAllies(Player source, int healAmount)
+        {
+            float range = 400f;
+            // Allies get 50% of the heal amount
+            int allyHeal = (int)(healAmount * 0.5f);
+            if (allyHeal < 1)
+                allyHeal = 1;
+
+            for (int i = 0; i < Main.maxPlayers; i++)
+            {
+                Player other = Main.player[i];
+                if (other.active && !other.dead && other.whoAmI != source.whoAmI)
+                {
+                    if (Vector2.Distance(source.Center, other.Center) <= range)
+                    {
+                        other.statLife = System.Math.Min(other.statLife + allyHeal, other.statLifeMax2);
+                        other.HealEffect(allyHeal);
+                    }
+                }
+            }
+
+            // Also heal nearby town NPCs
+            for (int i = 0; i < Main.maxNPCs; i++)
+            {
+                NPC npc = Main.npc[i];
+                if (npc.active && npc.friendly && npc.townNPC && npc.life < npc.lifeMax)
+                {
+                    if (Vector2.Distance(source.Center, npc.Center) <= range)
+                    {
+                        npc.life = System.Math.Min(npc.life + allyHeal, npc.lifeMax);
+                        npc.HealEffect(allyHeal);
+                    }
+                }
+            }
+        }
+
+        private void ShareManaWithAllies(Player source, int manaAmount)
+        {
+            float range = 400f;
+            int allyMana = (int)(manaAmount * 0.5f);
+            if (allyMana < 1)
+                allyMana = 1;
+
+            for (int i = 0; i < Main.maxPlayers; i++)
+            {
+                Player other = Main.player[i];
+                if (other.active && !other.dead && other.whoAmI != source.whoAmI)
+                {
+                    if (Vector2.Distance(source.Center, other.Center) <= range)
+                    {
+                        other.statMana = System.Math.Min(other.statMana + allyMana, other.statManaMax2);
+                        other.ManaEffect(allyMana);
+                    }
+                }
+            }
         }
     }
 }

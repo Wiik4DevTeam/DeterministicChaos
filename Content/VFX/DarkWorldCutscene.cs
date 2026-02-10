@@ -15,9 +15,6 @@ using Terraria.DataStructures;
 
 namespace DeterministicChaos.Content.VFX
 {
-    /// <summary>
-    /// Manages the Dark World portal opening cutscene.
-    /// </summary>
     public class DarkWorldCutscene : ModSystem
     {
         private static bool isPlaying = false;
@@ -90,9 +87,6 @@ namespace DeterministicChaos.Content.VFX
             smokeSpheres?.Clear();
         }
 
-        /// <summary>
-        /// Starts the Dark World opening cutscene.
-        /// </summary>
         public static void StartCutscene(Player player)
         {
             if (isPlaying)
@@ -108,9 +102,6 @@ namespace DeterministicChaos.Content.VFX
             StartCutsceneAtPosition(player.Center, player);
         }
         
-        /// <summary>
-        /// Starts the cutscene at a specific position (used for network sync).
-        /// </summary>
         public static void StartCutsceneAtPosition(Vector2 position, Player player)
         {
             if (isPlaying)

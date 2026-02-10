@@ -12,9 +12,6 @@ using Terraria.UI;
 
 namespace DeterministicChaos.Content.Systems
 {
-    /// <summary>
-    /// Represents a single dialogue entry with text and display options.
-    /// </summary>
     public class DialogueEntry
     {
         public string Text { get; set; }
@@ -31,9 +28,6 @@ namespace DeterministicChaos.Content.Systems
         }
     }
     
-    /// <summary>
-    /// Handles displaying dialogue boxes with animated text.
-    /// </summary>
     public class DialogueSystem : ModSystem
     {
         // Singleton instance for easy access
@@ -126,9 +120,6 @@ namespace DeterministicChaos.Content.Systems
             Instance = null;
         }
         
-        /// <summary>
-        /// Queues a dialogue to be displayed.
-        /// </summary>
         public void QueueDialogue(DialogueEntry dialogue)
         {
             dialogueQueue.Enqueue(dialogue);
@@ -140,17 +131,11 @@ namespace DeterministicChaos.Content.Systems
             }
         }
         
-        /// <summary>
-        /// Queues a simple dialogue with default settings.
-        /// </summary>
         public void QueueDialogue(string text, float lingerTime = 2f)
         {
             QueueDialogue(new DialogueEntry(text, lingerTime));
         }
         
-        /// <summary>
-        /// Queues multiple dialogues at once.
-        /// </summary>
         public void QueueDialogues(params DialogueEntry[] dialogues)
         {
             foreach (var dialogue in dialogues)
@@ -165,9 +150,6 @@ namespace DeterministicChaos.Content.Systems
             }
         }
         
-        /// <summary>
-        /// Clears all queued dialogues and closes any active dialogue.
-        /// </summary>
         public void ClearAllDialogue()
         {
             dialogueQueue.Clear();

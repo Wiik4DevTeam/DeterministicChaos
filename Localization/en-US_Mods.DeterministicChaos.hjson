@@ -46,6 +46,18 @@ Dialogue: {
 		ChooseTrait: Soul Traits
 		ViewTrait: View Trait
 		TraitInfo: Your soul radiates with {0}. This path is now permanent.
+		Help: Help
+		Next: Next
+		Close: Close
+		HelpPreSkeletron1: I'm too old to be fightin' along side ya, but I've got a few things that could help!
+		HelpPreSkeletron2: I can help unlock the potential of your SOUL! I'll provide some basic equipment, but the rest is on you!
+		HelpPreSkeletron3: Once the dungeon's cleared of all that nasty curse junk, I can get you some weapons, too!
+		HelpPreHardmode1: Nice job clearing out the Dungeon! I've got some weapons stocked up. They'll serve you well as you prepare for the next chapter.
+		HelpPreHardmode2: But be warned... once the spirits of Light and Dark are released, I can't change your SOUL's trait anymore.
+		HelpPostHardmode1: You're onto the next chapter. I knew you had it in you! If you're here to change your soul trait, I'm sorry to say I can't anymore.
+		HelpPostHardmode2: While you were down there fighting that meat rectangle, someone stopped by and gave me this Game Controller-a thingy. Seems like they wanted you to have it.
+		HelpPostHardmode3: Now, I don't know much about games, but I'd be careful. Seems like there's more to it than meets the eye.
+		HelpPostERAM1: Looks like ya beat the game! Technology is so advanced these days...
 	}
 }
 
@@ -144,6 +156,11 @@ Buffs: {
 		DisplayName: Roaring Summon Buff
 		Description: Mods.DeterministicChaos.Buffs.RoaringSummonBuff.Description
 	}
+
+	HollowGunTagDebuff: {
+		DisplayName: Justice Tag
+		Description: Marked for summon damage.
+	}
 }
 
 Projectiles: {
@@ -186,6 +203,14 @@ Projectiles: {
 	RogueSeekingKnife.DisplayName: Seeking Knife
 	RogueSlashAttack.DisplayName: Rogue Slash Attack
 	BaseballBatSwing.DisplayName: Baseball Bat Swing
+	RustyKnifeSwing.DisplayName: Rusty Knife
+	DeterminationSlash.DisplayName: Determination Slash
+	FryingPanSwing.DisplayName: Frying Pan
+	EggProjectile.DisplayName: Egg
+	KindnessPickup.DisplayName: Kindness
+	JusticeBeam.DisplayName: Justice Beam
+	TornNotebookLetter.DisplayName: Letter
+	BalletShoesProjectile.DisplayName: Ballet Dash
 }
 
 Items: {
@@ -238,8 +263,22 @@ Items: {
 		DisplayName: Cloudy Glasses
 		Tooltip:
 			'''
+			Requires PERSEVERANCE soul trait.
 			+3 Perseverance investment points.
 			Increases invulnerability frames by 0.3 seconds when hit.
+			'''
+	}
+
+	TornNotebook: {
+		DisplayName: Torn Notebook
+		Tooltip:
+			'''
+			Words have power.
+			Requires PERSEVERANCE soul trait.
+			+3 Perseverance investment points.
+			Fires letters stored in your book. Each letter costs 20 mana.
+			While in Rogue Stealth: Letters cost half mana.
+			Right-click to write in the book. Certain words have special effects.
 			'''
 	}
 
@@ -247,6 +286,7 @@ Items: {
 		DisplayName: Cowboy Hat
 		Tooltip:
 			'''
+			Requires JUSTICE soul trait.
 			+3 Justice investment points.
 			Critical hits increase global attack speed by 50% for 0.2 seconds.
 			'''
@@ -256,6 +296,7 @@ Items: {
 		DisplayName: Faded Ribbon
 		Tooltip:
 			'''
+			Requires PATIENCE soul trait.
 			+3 Patience investment points.
 			While at max health, take 30% decreased damage.
 			'''
@@ -265,6 +306,7 @@ Items: {
 		DisplayName: Heart Locket
 		Tooltip:
 			'''
+			Requires DETERMINATION soul trait.
 			+3 Determination investment points.
 			Gain increasing bonuses to all stats as your health gets lower.
 			'''
@@ -274,6 +316,7 @@ Items: {
 		DisplayName: Manly Bandana
 		Tooltip:
 			'''
+			Requires BRAVERY soul trait.
 			+3 Bravery investment points.
 			Gain increased damage based on your current velocity, up to 10%.
 			'''
@@ -283,8 +326,9 @@ Items: {
 		DisplayName: Old TuTu
 		Tooltip:
 			'''
+			Requires INTEGRITY soul trait.
 			+3 Integrity investment points.
-			Allows the user to dash away from enemies.
+			Press the DASH key to perform an evasive maneuver that inverts your velocity at half speed.
 			'''
 	}
 
@@ -292,8 +336,9 @@ Items: {
 		DisplayName: Stained Apron
 		Tooltip:
 			'''
+			Requires KINDNESS soul trait.
 			+3 Kindness investment points.
-			All healing done to nearby teammates is applied to you as well.
+			All healing done to nearby teammates and town NPCs is applied to you as well.
 			'''
 	}
 
@@ -485,6 +530,58 @@ Items: {
 		DisplayName: Baseball Bat
 		Tooltip: Raise up your bat for the burning fight!
 	}
+
+	RustyKnife: {
+		DisplayName: Rusty Knife
+		Tooltip:
+			'''
+			A worn blade that resonates with DETERMINATION.
+			+3 Determination Investment
+			Melee attacks restore 20 Mana.
+			Right click to consume 200 mana and begin a Timed Attack.
+			Time the marker to the center for up to 3x damage on the ranged slash.
+			Requires the DETERMINATION Trait to use the Timed Attack.
+			'''
+	}
+
+	FryingPan: {
+		DisplayName: Frying Pan
+		Tooltip:
+			'''
+			A well-seasoned pan that resonates with KINDNESS.
+			+3 Kindness Investment
+			Converts ammo into eggs that spawn healing pickups on hit.
+			Requires the KINDNESS Trait to launch eggs.
+			'''
+	}
+
+	HollowGun: {
+		DisplayName: Hollow Gun
+		Tooltip:
+			'''
+			+3 Justice Investment
+			An empty gun. Yours to make purpose to.
+			When using any Double Jump, marks the highest health enemy nearby.
+			Your next shot fires an auto-homing Justice beam that critically hits. Your summons will focus struck enemies.
+			Requires the JUSTICE Trait to use.
+			'''
+	}
+
+	BalletShoes: {
+		DisplayName: Ballet Shoes
+		Tooltip:
+			'''
+			Dance through the battlefield with grace.
+			Requires INTEGRITY soul trait.
+			+3 Integrity investment points.
+			Launch yourself toward your cursor.
+			Brief parry window (0.15s) on use - any damage is completely negated.
+			Hitting enemies focuses your summons on them.
+			Parrying or hitting enemies grants a Grace Stack (max 3).
+			Grace Stacks are consumed when taking damage to halve it.
+			+15% damage per stack, +25% crit damage at 2+ stacks.
+			'''
+	}
 }
 
 Tiles: {
@@ -505,7 +602,7 @@ SoulTraits: {
 	Kindness: {
 		Name: KINDNESS
 		Description: A soul that nurtures and protects.
-		Bonus3: +2 life regeneration to you and nearby allies.
+		Bonus3: +2 life regeneration to you. Heals nearby allies and town NPCs for 2 HP every second.
 		Bonus5: When you or nearby allies take damage, increase your defense by +6 for 3 seconds.
 		Bonus12: Potion effects are applied to nearby allies. +20% potion effect duration.
 		Bonus20: When you or an ally dies, you and each ally gain a Kindness Mark. Increases total damage by 25% for 10 seconds.
@@ -570,4 +667,12 @@ SoulTraits: {
 		DisplayName: Titan Forge
 		Tooltip: A workbench forged from dark energy, used to craft powerful items. Can only be found in a Dark World.
 	}
+}
+
+DamageClasses: {
+	MeleeMagicDamageClass.DisplayName: Melee (Magic) damage
+	RangedMeleeDamageClass.DisplayName: Ranged (Melee) damage
+	RangedSummonDamageClass.DisplayName: Ranged (Summoner) damage
+	MagicRogueDamageClass.DisplayName: Magic (Rogue) damage
+	SummonerMeleeDamageClass.DisplayName: Summoner (Melee) damage
 }

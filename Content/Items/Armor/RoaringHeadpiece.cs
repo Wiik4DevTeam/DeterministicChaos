@@ -4,6 +4,7 @@ using Terraria;
 using Terraria.DataStructures;
 using Terraria.ID;
 using Terraria.ModLoader;
+using DeterministicChaos.Content.SoulTraits;
 
 namespace DeterministicChaos.Content.Items.Armor
 {
@@ -35,13 +36,16 @@ namespace DeterministicChaos.Content.Items.Armor
 
         public override void UpdateArmorSet(Player player)
         {
-            player.setBonus = "Roaring Shadow\n+3 max minions\n-20% minion damage\nShadow clones will mirror your whip attacks with the Gnomon whip";
+            player.setBonus = "Roaring Shadow\n+5 Soul Investment\n+3 max minions\n-20% minion damage\nShadow clones will mirror your whip attacks with the Gnomon whip";
             // Extra minions
             player.maxMinions += 3;
             // Decreased minion damage
             player.GetDamage(DamageClass.Summon) -= 0.20f;
             // Enable clone whip mirror effect
             player.GetModPlayer<RoaringArmorPlayer>().roaringSummonerSet = true;
+            
+            // +5 Soul Investment from set bonus
+            player.GetModPlayer<SoulTraitPlayer>().ArmorInvestment += 5;
         }
 
         public override void UpdateEquip(Player player)

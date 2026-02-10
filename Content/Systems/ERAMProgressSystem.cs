@@ -7,9 +7,6 @@ using DeterministicChaos.Content.Subworlds;
 
 namespace DeterministicChaos.Content.Systems
 {
-    /// <summary>
-    /// Saves and loads boss defeat progress flags per world.
-    /// </summary>
     public class ERAMProgressSystem : ModSystem
     {
         // World-persistent boss defeat flags

@@ -28,6 +28,26 @@ namespace DeterministicChaos.Content.SoulTraits.Armor
                     line.OverrideColor = perseveranceColor;
                 }
             }
+            
+            // Show immunity status if equipped
+            Player player = Main.LocalPlayer;
+            if (player != null && player.active)
+            {
+                var glassesPlayer = player.GetModPlayer<CloudyGlassesPlayer>();
+                
+                if (glassesPlayer.hasCloudyGlasses)
+                {
+                    if (player.immune)
+                    {
+                        float immuneSeconds = player.immuneTime / 60f;
+                        tooltips.Add(new TooltipLine(Mod, "CurrentBonus", $"[c/FF00FF:Currently immune! ({immuneSeconds:F1}s remaining)]"));
+                    }
+                    else
+                    {
+                        tooltips.Add(new TooltipLine(Mod, "CurrentBonus", $"[c/800080:+0.3s immunity extension ready]"));
+                    }
+                }
+            }
         }
 
         public override void UpdateAccessory(Player player, bool hideVisual)

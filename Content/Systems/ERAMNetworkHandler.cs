@@ -32,9 +32,6 @@ namespace DeterministicChaos.Content.Systems
             }
         }
         
-        /// <summary>
-        /// Sends a packet to start the Dark World cutscene on all clients.
-        /// </summary>
         public static void SendDarkWorldCutscenePacket(Vector2 position, int originPlayerIndex)
         {
             if (Main.netMode == NetmodeID.SinglePlayer)
@@ -84,9 +81,6 @@ namespace DeterministicChaos.Content.Systems
             }
         }
         
-        /// <summary>
-        /// Sends dialogue to be displayed on all clients.
-        /// </summary>
         public static void SendDialoguePacket(string[] texts, float[] lingerTimes)
         {
             if (Main.netMode == NetmodeID.SinglePlayer)

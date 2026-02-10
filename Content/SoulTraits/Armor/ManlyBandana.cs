@@ -36,15 +36,10 @@ namespace DeterministicChaos.Content.SoulTraits.Armor
             if (player != null && player.active)
             {
                 var bandanaPlayer = player.GetModPlayer<ManlyBandanaPlayer>();
-                var traitPlayer = player.GetModPlayer<SoulTraitPlayer>();
                 
-                if (bandanaPlayer.hasManlyBandana && traitPlayer.CurrentTrait == SoulTraitType.Bravery)
+                if (bandanaPlayer.hasManlyBandana)
                 {
-                    float velocity = player.velocity.Length();
-                    const float maxVelocity = 16f;
-                    float velocityPercent = Math.Min(velocity / maxVelocity, 1f);
-                    float damageBonus = 10f * velocityPercent;
-                    
+                    float damageBonus = bandanaPlayer.currentDamageBonus * 100f;
                     tooltips.Add(new TooltipLine(Mod, "CurrentBonus", $"[c/FFA500:Current velocity bonus: +{damageBonus:F1}% damage]"));
                 }
             }

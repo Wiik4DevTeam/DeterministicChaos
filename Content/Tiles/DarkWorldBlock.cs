@@ -7,10 +7,6 @@ using Terraria.ModLoader;
 
 namespace DeterministicChaos.Content.Tiles
 {
-    /// <summary>
-    /// A simple dark indestructible tile for the Dark World.
-    /// Draws as a solid dark purple block.
-    /// </summary>
     public class DarkWorldBlock : ModTile
     {
         // Use vanilla obsidian texture as base

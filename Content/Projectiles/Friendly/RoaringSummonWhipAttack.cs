@@ -167,7 +167,8 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
         
         private void SpawnSlashAttack(NPC target, Vector2 clonePosition)
         {
-            if (Main.netMode == NetmodeID.MultiplayerClient)
+            // Owner client spawns and syncs the projectile
+            if (Main.myPlayer != Projectile.owner)
                 return;
             
             // Calculate angle from target to clone (line starts facing the clone)

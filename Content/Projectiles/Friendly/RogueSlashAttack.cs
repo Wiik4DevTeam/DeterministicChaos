@@ -72,27 +72,36 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
             Projectile.rotation = reader.ReadSingle();
         }
         
+        private bool initialized = false;
+        
         public override void OnSpawn(Terraria.DataStructures.IEntitySource source)
         {
             // Lock spawn position
             Projectile.localAI[0] = Projectile.Center.X;
             Projectile.localAI[1] = Projectile.Center.Y;
-            
-            // Set rotation from ai[0]
-            if (Main.netMode != NetmodeID.MultiplayerClient)
-            {
-                float passedAngle = Projectile.ai[0];
-                Projectile.rotation = passedAngle - MathHelper.PiOver2;
-                
-                if (Main.rand.NextBool())
-                    Projectile.rotation += MathHelper.Pi;
-                
-                Projectile.netUpdate = true;
-            }
         }
         
         public override void AI()
         {
+            // Initialize rotation from synced ai values
+            if (!initialized)
+            {
+                initialized = true;
+                float passedAngle = Projectile.ai[0];
+                Projectile.rotation = passedAngle - MathHelper.PiOver2;
+                
+                // Use ai[1] bit 1 for horizontal flip as rotation offset
+                if (((int)Projectile.ai[1] & 2) != 0)
+                    Projectile.rotation += MathHelper.Pi;
+                
+                // Ensure position is locked
+                if (Projectile.localAI[0] == 0 && Projectile.localAI[1] == 0)
+                {
+                    Projectile.localAI[0] = Projectile.Center.X;
+                    Projectile.localAI[1] = Projectile.Center.Y;
+                }
+            }
+            
             // Play sound on first tick
             if (!hasPlayedSound && Main.netMode != NetmodeID.Server)
             {

@@ -29,7 +29,7 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
         private bool isVisible = true;
         
         // ai[0] = target NPC index
-        // ai[1] = spawn delay (optional)
+        // ai[1] = orbit angle (passed from spawner for MP sync)
         
         public override void SetStaticDefaults()
         {
@@ -77,8 +77,8 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
         {
             int targetIndex = (int)Projectile.ai[0];
             
-            // Assign a random orbit position
-            orbitAngle = Main.rand.NextFloat(MathHelper.TwoPi);
+            // Use orbit angle from ai[1] (synced from spawner)
+            orbitAngle = Projectile.ai[1];
             
             if (targetIndex >= 0 && targetIndex < Main.maxNPCs)
             {
@@ -178,7 +178,8 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
                     Projectile.velocity = dashDir * DashSpeed;
                     
                     // Spawn slash attack at the target position
-                    if (Main.netMode != NetmodeID.MultiplayerClient)
+                    // Owner client spawns and syncs the projectile
+                    if (Main.myPlayer == Projectile.owner)
                     {
                         SpawnSlashAttack();
                     }

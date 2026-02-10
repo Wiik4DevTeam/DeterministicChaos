@@ -88,10 +88,14 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
 
         public override void OnHitNPC(NPC target, NPC.HitInfo hit, int damageDone)
         {
+            // Spawn seeking knife on the owner's client (they handle projectile spawning)
             if (Main.myPlayer == Projectile.owner)
             {
                 // Spawn 1 seeking knife at the target on every hit
                 int knifeDamage = (int)(damageDone * 0.5f);
+                
+                // Pass a random orbit angle in ai[1] so it's consistent
+                float orbitAngle = Main.rand.NextFloat(MathHelper.TwoPi);
                 
                 int p = Projectile.NewProjectile(
                     Projectile.GetSource_OnHit(target),
@@ -101,7 +105,8 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
                     knifeDamage,
                     2f,
                     Projectile.owner,
-                    target.whoAmI
+                    target.whoAmI,
+                    orbitAngle
                 );
                 
                 if (p >= 0 && p < Main.maxProjectiles)

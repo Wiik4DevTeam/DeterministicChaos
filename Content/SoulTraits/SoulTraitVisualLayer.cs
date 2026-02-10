@@ -11,9 +11,6 @@ using DeterministicChaos.Content.Subworlds;
 
 namespace DeterministicChaos.Content.SoulTraits
 {
-    /// <summary>
-    /// Draws the soul visual in the normal world (affected by screen filters).
-    /// </summary>
     public class SoulTraitVisualLayer : PlayerDrawLayer
     {
         public override Position GetDefaultPosition() => new AfterParent(PlayerDrawLayers.LastVanillaLayer);
@@ -110,10 +107,6 @@ namespace DeterministicChaos.Content.SoulTraits
         }
     }
     
-    /// <summary>
-    /// Draws the soul visual in the Dark World as a UI element (after screen filters).
-    /// This prevents the invert filter from affecting the soul's colors.
-    /// </summary>
     public class DarkDimensionSoulDrawSystem : ModSystem
     {
         public override void ModifyInterfaceLayers(List<GameInterfaceLayer> layers)

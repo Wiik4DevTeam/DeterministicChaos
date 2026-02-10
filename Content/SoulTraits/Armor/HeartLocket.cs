@@ -35,16 +35,13 @@ namespace DeterministicChaos.Content.SoulTraits.Armor
             if (player != null && player.active)
             {
                 var locketPlayer = player.GetModPlayer<HeartLocketPlayer>();
-                var traitPlayer = player.GetModPlayer<SoulTraitPlayer>();
                 
-                if (locketPlayer.hasHeartLocket && traitPlayer.CurrentTrait == SoulTraitType.Determination)
+                if (locketPlayer.hasHeartLocket)
                 {
-                    float missingHealthPercent = 1f - (player.statLife / (float)player.statLifeMax2);
-                    
-                    float damageBonus = 15f * missingHealthPercent;
-                    float attackSpeedBonus = 15f * missingHealthPercent;
-                    int defenseBonus = (int)(10 * missingHealthPercent);
-                    float moveSpeedBonus = 10f * missingHealthPercent;
+                    float damageBonus = locketPlayer.currentDamageBonus * 100f;
+                    float attackSpeedBonus = locketPlayer.currentAttackSpeedBonus * 100f;
+                    int defenseBonus = locketPlayer.currentDefenseBonus;
+                    float moveSpeedBonus = locketPlayer.currentMoveSpeedBonus * 100f;
                     
                     tooltips.Add(new TooltipLine(Mod, "CurrentBonus", 
                         $"[c/FF0000:Missing health bonuses: +{damageBonus:F1}% damage, +{attackSpeedBonus:F1}% attack speed]\n" +
@@ -72,10 +69,18 @@ namespace DeterministicChaos.Content.SoulTraits.Armor
     public class HeartLocketPlayer : ModPlayer
     {
         public bool hasHeartLocket;
+        public float currentDamageBonus;
+        public float currentAttackSpeedBonus;
+        public int currentDefenseBonus;
+        public float currentMoveSpeedBonus;
 
         public override void ResetEffects()
         {
             hasHeartLocket = false;
+            currentDamageBonus = 0f;
+            currentAttackSpeedBonus = 0f;
+            currentDefenseBonus = 0;
+            currentMoveSpeedBonus = 0f;
         }
 
         public override void PostUpdateEquips()
@@ -88,10 +93,15 @@ namespace DeterministicChaos.Content.SoulTraits.Armor
                 // Maximum bonuses at 1 HP: +15% damage, +15% attack speed, +10 defense, +10% move speed
                 float bonusMultiplier = missingHealthPercent;
                 
-                Player.GetDamage(DamageClass.Generic) += 0.15f * bonusMultiplier;
-                Player.GetAttackSpeed(DamageClass.Generic) += 0.15f * bonusMultiplier;
-                Player.statDefense += (int)(10 * bonusMultiplier);
-                Player.moveSpeed += 0.10f * bonusMultiplier;
+                currentDamageBonus = 0.15f * bonusMultiplier;
+                currentAttackSpeedBonus = 0.15f * bonusMultiplier;
+                currentDefenseBonus = (int)(10 * bonusMultiplier);
+                currentMoveSpeedBonus = 0.10f * bonusMultiplier;
+                
+                Player.GetDamage(DamageClass.Generic) += currentDamageBonus;
+                Player.GetAttackSpeed(DamageClass.Generic) += currentAttackSpeedBonus;
+                Player.statDefense += currentDefenseBonus;
+                Player.moveSpeed += currentMoveSpeedBonus;
                 
                 // Visual effect when at low health (below 50%)
                 if (missingHealthPercent > 0.5f && Main.rand.NextBool(5))

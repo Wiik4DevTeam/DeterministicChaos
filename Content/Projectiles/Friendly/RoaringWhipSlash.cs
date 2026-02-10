@@ -124,8 +124,8 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
                     ));
                 }
                 
-                // Spawn the actual damaging slash
-                if (Main.netMode != NetmodeID.MultiplayerClient)
+                // Spawn the actual damaging slash on the owner's client
+                if (Main.myPlayer == Projectile.owner)
                     SpawnSlash();
             }
             
@@ -146,9 +146,9 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
             float worldAngle = baseAngle + finalDelta;
             float finalRotation = worldAngle + MathHelper.PiOver2 + MathHelper.Pi;
             
-            float vFlip = Main.rand.NextBool() ? 1f : 0f;
-            
             // Spawn the friendly slash attack
+            float flipFlag = Main.rand.NextBool() ? 2f : 0f;
+            
             int s = Projectile.NewProjectile(
                 Projectile.GetSource_FromAI(),
                 pos.X,
@@ -160,7 +160,7 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
                 0f,
                 Projectile.owner,
                 finalRotation,
-                vFlip > 0.5f ? 2 : 0
+                flipFlag
             );
             
             if (s >= 0 && s < Main.maxProjectiles)

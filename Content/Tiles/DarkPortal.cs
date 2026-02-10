@@ -12,10 +12,6 @@ using Terraria.ObjectData;
 
 namespace DeterministicChaos.Content.Tiles
 {
-    /// <summary>
-    /// A return portal that sends players back to the main world.
-    /// Invisible tile with large interaction hitbox, visual handled by FountainVisualSystem.
-    /// </summary>
     public class DarkPortal : ModTile
     {
         // Portal X position for the visual system to use

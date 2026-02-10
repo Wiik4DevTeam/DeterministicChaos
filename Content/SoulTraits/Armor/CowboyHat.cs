@@ -28,6 +28,25 @@ namespace DeterministicChaos.Content.SoulTraits.Armor
                     line.OverrideColor = justiceColor;
                 }
             }
+            
+            // Show current attack speed buff status if equipped
+            Player player = Main.LocalPlayer;
+            if (player != null && player.active)
+            {
+                var hatPlayer = player.GetModPlayer<CowboyHatPlayer>();
+                
+                if (hatPlayer.hasCowboyHat)
+                {
+                    if (hatPlayer.critAttackSpeedTimer > 0)
+                    {
+                        tooltips.Add(new TooltipLine(Mod, "CurrentBonus", $"[c/FFFF00:Attack speed buff ACTIVE! (+50%)]"));
+                    }
+                    else
+                    {
+                        tooltips.Add(new TooltipLine(Mod, "CurrentBonus", $"[c/808000:Attack speed buff ready (land a crit)]"));
+                    }
+                }
+            }
         }
 
         public override void UpdateAccessory(Player player, bool hideVisual)

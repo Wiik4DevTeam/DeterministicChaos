@@ -7,7 +7,6 @@ using Terraria.ModLoader;
 
 namespace DeterministicChaos.Content.Items.Armor
 {
-    // ModPlayer class to handle Roaring armor set bonuses
     public class RoaringArmorPlayer : ModPlayer
     {
         // Set bonus flags

@@ -6,21 +6,10 @@ using DeterministicChaos.Content.Subworlds;
 
 namespace DeterministicChaos.Content.Subworlds
 {
-    /// <summary>
-    /// ModPlayer to handle Dark World related player state.
-    /// </summary>
     public class DarkDimensionPlayer : ModPlayer
     {
-        /// <summary>
-        /// Flag to mark this player should enter the Dark World.
-        /// Used for multiplayer synchronization.
-        /// </summary>
         public bool shouldEnterDarkDimension = false;
         
-        /// <summary>
-        /// Position in main world before entering Dark World.
-        /// Used to return player to correct location.
-        /// </summary>
         public float returnX = 0f;
         public float returnY = 0f;
         

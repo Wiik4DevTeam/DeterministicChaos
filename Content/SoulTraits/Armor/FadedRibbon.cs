@@ -28,6 +28,26 @@ namespace DeterministicChaos.Content.SoulTraits.Armor
                     line.OverrideColor = patienceColor;
                 }
             }
+            
+            // Show current damage reduction status if equipped
+            Player player = Main.LocalPlayer;
+            if (player != null && player.active)
+            {
+                var ribbonPlayer = player.GetModPlayer<FadedRibbonPlayer>();
+                
+                if (ribbonPlayer.hasFadedRibbon)
+                {
+                    if (player.statLife >= player.statLifeMax2)
+                    {
+                        tooltips.Add(new TooltipLine(Mod, "CurrentBonus", $"[c/00FFFF:Damage reduction ACTIVE! (-30% damage taken)]"));
+                    }
+                    else
+                    {
+                        int missingHP = player.statLifeMax2 - player.statLife;
+                        tooltips.Add(new TooltipLine(Mod, "CurrentBonus", $"[c/008080:Damage reduction inactive (need {missingHP} HP to full)]"));
+                    }
+                }
+            }
         }
 
         public override void UpdateAccessory(Player player, bool hideVisual)

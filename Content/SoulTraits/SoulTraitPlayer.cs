@@ -139,7 +139,8 @@ namespace DeterministicChaos.Content.SoulTraits
 
             int investment = TotalInvestment;
 
-            ApplyTraitEffects(investment);
+            // Apply ALL trait effects, but only give investment bonuses to the matching soul
+            ApplyAllTraitEffects(investment);
         }
 
         public override void PostUpdate()
@@ -253,32 +254,16 @@ namespace DeterministicChaos.Content.SoulTraits
             }
         }
 
-        private void ApplyTraitEffects(int investment)
+        private void ApplyAllTraitEffects(int investment)
         {
-            switch (CurrentTrait)
-            {
-                case SoulTraitType.Justice:
-                    ApplyJusticeEffects(investment);
-                    break;
-                case SoulTraitType.Kindness:
-                    ApplyKindnessEffects(investment);
-                    break;
-                case SoulTraitType.Bravery:
-                    ApplyBraveryEffects(investment);
-                    break;
-                case SoulTraitType.Patience:
-                    ApplyPatienceEffects(investment);
-                    break;
-                case SoulTraitType.Integrity:
-                    ApplyIntegrityEffects(investment);
-                    break;
-                case SoulTraitType.Perseverance:
-                    ApplyPerseveranceEffects(investment);
-                    break;
-                case SoulTraitType.Determination:
-                    ApplyDeterminationEffects(investment);
-                    break;
-            }
+            // Apply all trait effects, only giving investment bonuses to the matching soul type
+            ApplyJusticeEffects(CurrentTrait == SoulTraitType.Justice ? investment : 0);
+            ApplyKindnessEffects(CurrentTrait == SoulTraitType.Kindness ? investment : 0);
+            ApplyBraveryEffects(CurrentTrait == SoulTraitType.Bravery ? investment : 0);
+            ApplyPatienceEffects(CurrentTrait == SoulTraitType.Patience ? investment : 0);
+            ApplyIntegrityEffects(CurrentTrait == SoulTraitType.Integrity ? investment : 0);
+            ApplyPerseveranceEffects(CurrentTrait == SoulTraitType.Perseverance ? investment : 0);
+            ApplyDeterminationEffects(CurrentTrait == SoulTraitType.Determination ? investment : 0);
         }
 
         private void ApplyJusticeEffects(int investment)
@@ -301,6 +286,7 @@ namespace DeterministicChaos.Content.SoulTraits
             {
                 Player.GetDamage(DamageClass.Ranged) += 0.10f;
                 Player.GetDamage(DamageClass.Magic) += 0.10f;
+                Player.GetDamage(ModContent.GetInstance<Items.RangedSummonDamageClass>()) += 0.10f;
             }
         }
 
@@ -310,7 +296,7 @@ namespace DeterministicChaos.Content.SoulTraits
             if (investment >= 3)
             {
                 Player.lifeRegen += 2;
-                ApplyNearbyAllyRegen();
+                ApplyNearbyAllyHealing();
             }
 
             // 5 Investment: Defense boost when damaged
@@ -322,17 +308,38 @@ namespace DeterministicChaos.Content.SoulTraits
             // 12 Investment: +20% potion duration handled in OnConsumeItem
         }
 
-        private void ApplyNearbyAllyRegen()
+        private void ApplyNearbyAllyHealing()
         {
+            // Only heal once per second (60 ticks)
+            if (Main.GameUpdateCount % 60 != 0)
+                return;
+                
             float range = 400f;
+            
+            // Heal nearby players
             for (int i = 0; i < Main.maxPlayers; i++)
             {
                 Player other = Main.player[i];
-                if (other.active && !other.dead && other.whoAmI != Player.whoAmI)
+                if (other.active && !other.dead && other.whoAmI != Player.whoAmI && other.statLife < other.statLifeMax2)
                 {
                     if (Vector2.Distance(Player.Center, other.Center) <= range)
                     {
-                        other.lifeRegen += 2;
+                        other.statLife = Math.Min(other.statLife + 2, other.statLifeMax2);
+                        other.HealEffect(2);
+                    }
+                }
+            }
+            
+            // Heal nearby friendly NPCs (town NPCs)
+            for (int i = 0; i < Main.maxNPCs; i++)
+            {
+                NPC npc = Main.npc[i];
+                if (npc.active && npc.friendly && npc.townNPC && npc.life < npc.lifeMax)
+                {
+                    if (Vector2.Distance(Player.Center, npc.Center) <= range)
+                    {
+                        npc.life = Math.Min(npc.life + 2, npc.lifeMax);
+                        npc.HealEffect(2);
                     }
                 }
             }
@@ -494,6 +501,17 @@ namespace DeterministicChaos.Content.SoulTraits
             }
         }
 
+        public override void Kill(double damage, int hitDirection, bool pvp, PlayerDeathReason damageSource)
+        {
+            // Spawn soul shatter effect — the soul breaks into shards of glass
+            if (CurrentTrait != SoulTraitType.None && SoulVisible)
+            {
+                float bobOffset = (float)System.Math.Sin(Main.GameUpdateCount * 0.05f) * 3f;
+                Vector2 soulPosition = Player.Center + new Vector2(0, -40 + bobOffset);
+                SoulShatterSystem.SpawnShatter(soulPosition, CurrentTrait);
+            }
+        }
+
         public override bool PreKill(double damage, int hitDirection, bool pvp, ref bool playSound, ref bool genGore, ref PlayerDeathReason damageSource)
         {
             // Determination 20 Investment: Revive mechanic
@@ -539,33 +557,30 @@ namespace DeterministicChaos.Content.SoulTraits
         {
             CombatTimer = CombatDuration;
 
-            // Patience: Reset no damage timer
-            if (CurrentTrait == SoulTraitType.Patience)
-            {
-                PatienceNoDamageTimer = 0;
-            }
+            // Patience: Reset no damage timer (all souls)
+            PatienceNoDamageTimer = 0;
 
-            // Kindness 5 Investment: Trigger defense boost
+            // Kindness 5 Investment: Trigger defense boost (matching soul only)
             if (CurrentTrait == SoulTraitType.Kindness && TotalInvestment >= 5)
             {
                 KindnessDefenseTimer = KindnessDefenseDuration;
                 TriggerKindnessDefenseForNearbyAllies();
             }
 
-            // Bravery 12 Investment: Trigger damage boost
+            // Bravery 12 Investment: Trigger damage boost (matching soul only)
             if (CurrentTrait == SoulTraitType.Bravery && TotalInvestment >= 12)
             {
                 BraveryDamageTimer = BraveryDamageDuration;
             }
 
-            // Perseverance 5 Investment: Stack damage boost
+            // Perseverance 5 Investment: Stack damage boost (matching soul only)
             if (CurrentTrait == SoulTraitType.Perseverance && TotalInvestment >= 5)
             {
                 PerseveranceDamageStacks = Math.Min(PerseveranceDamageStacks + 1, 5);
                 PerseveranceDamageTimer = PerseveranceDamageDuration;
             }
 
-            // Perseverance 20 Investment: Gain mark
+            // Perseverance 20 Investment: Gain mark (matching soul only)
             if (CurrentTrait == SoulTraitType.Perseverance && TotalInvestment >= 20)
             {
                 PerseveranceMarkActive = true;
@@ -574,13 +589,13 @@ namespace DeterministicChaos.Content.SoulTraits
 
         public override void ModifyHurt(ref Player.HurtModifiers modifiers)
         {
-            // Bravery 3 Investment: Take 5% increased damage
+            // Bravery 3 Investment: Take 5% increased damage (matching soul only)
             if (CurrentTrait == SoulTraitType.Bravery && TotalInvestment >= 3)
             {
                 modifiers.FinalDamage *= 1.05f;
             }
 
-            // Patience 20 Investment: Consume mark to reduce damage by 50%
+            // Patience 20 Investment: Consume mark to reduce damage by 50% (matching soul only)
             if (CurrentTrait == SoulTraitType.Patience && TotalInvestment >= 20 && PatienceMarkStacks > 0)
             {
                 PatienceMarkStacks--;
@@ -592,7 +607,7 @@ namespace DeterministicChaos.Content.SoulTraits
         {
             CombatTimer = CombatDuration;
 
-            // Bravery 3 Investment: +10% damage to nearby enemies
+            // Bravery 3 Investment: +10% damage to nearby enemies (matching soul only)
             if (CurrentTrait == SoulTraitType.Bravery && TotalInvestment >= 3)
             {
                 float dist = Vector2.Distance(Player.Center, target.Center);
@@ -602,7 +617,7 @@ namespace DeterministicChaos.Content.SoulTraits
                 }
             }
 
-            // Justice 20 Investment: Justice Mark guarantees crit
+            // Justice 20 Investment: Justice Mark guarantees crit (matching soul only)
             if (CurrentTrait == SoulTraitType.Justice && TotalInvestment >= 20 && JusticeMarkActive)
             {
                 modifiers.SetCrit();
@@ -615,26 +630,26 @@ namespace DeterministicChaos.Content.SoulTraits
                 }
             }
 
-            // Integrity 3 Investment: +15% crit damage
+            // Integrity 3 Investment: +15% crit damage (matching soul only)
             if (CurrentTrait == SoulTraitType.Integrity && TotalInvestment >= 3)
             {
                 modifiers.CritDamage += 0.15f;
             }
 
-            // Integrity 20 Investment: Integrity Mark increases next crit damage
+            // Integrity 20 Investment: Integrity Mark increases next crit damage (matching soul only)
             if (CurrentTrait == SoulTraitType.Integrity && TotalInvestment >= 20 && IntegrityMarkStacks > 0)
             {
                 modifiers.CritDamage += 0.25f * IntegrityMarkStacks;
             }
 
-            // Perseverance 20 Investment: Add defense to armor penetration
+            // Perseverance 20 Investment: Add defense to armor penetration (matching soul only)
             if (CurrentTrait == SoulTraitType.Perseverance && TotalInvestment >= 20 && PerseveranceMarkActive)
             {
                 modifiers.ArmorPenetration += Player.statDefense;
                 PerseveranceMarkActive = false;
             }
 
-            // Kindness 20 Investment: Damage boost from mark
+            // Kindness 20 Investment: Damage boost from mark (all souls can benefit)
             if (KindnessMarkTimer > 0)
             {
                 modifiers.FinalDamage *= 1.25f;
@@ -643,7 +658,7 @@ namespace DeterministicChaos.Content.SoulTraits
 
         public override void OnHitNPC(NPC target, NPC.HitInfo hit, int damageDone)
         {
-            // Justice 20 Investment: Count hits for mark
+            // Justice 20 Investment: Count hits for mark (matching soul only)
             if (CurrentTrait == SoulTraitType.Justice && TotalInvestment >= 20)
             {
                 JusticeHitCounter++;
@@ -660,14 +675,14 @@ namespace DeterministicChaos.Content.SoulTraits
                 }
             }
 
-            // Bravery 20 Investment: Activate mark
+            // Bravery 20 Investment: Activate mark (matching soul only)
             if (CurrentTrait == SoulTraitType.Bravery && TotalInvestment >= 20)
             {
                 BraveryMarkActive = true;
                 BraveryMarkTimer = 300;
             }
 
-            // Integrity 20 Investment: Build mark stacks (up to 3)
+            // Integrity 20 Investment: Build mark stacks (matching soul only)
             if (CurrentTrait == SoulTraitType.Integrity && TotalInvestment >= 20)
             {
                 if (hit.Crit)
