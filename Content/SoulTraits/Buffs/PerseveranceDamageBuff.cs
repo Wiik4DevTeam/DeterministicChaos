@@ -16,16 +16,9 @@ namespace DeterministicChaos.Content.SoulTraits.Buffs
 
         public override void Update(Player player, ref int buffIndex)
         {
-            var traitPlayer = player.GetModPlayer<SoulTraitPlayer>();
-            if (traitPlayer.PerseveranceDamageStacks <= 0 || traitPlayer.PerseveranceDamageTimer <= 0)
-            {
-                player.DelBuff(buffIndex);
-                buffIndex--;
-            }
-            else
-            {
-                player.buffTime[buffIndex] = traitPlayer.PerseveranceDamageTimer;
-            }
+            // This buff is no longer used, damage stacks moved to Integrity
+            player.DelBuff(buffIndex);
+            buffIndex--;
         }
     }
 }

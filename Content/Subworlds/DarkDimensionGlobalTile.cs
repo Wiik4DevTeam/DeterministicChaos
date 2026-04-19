@@ -9,7 +9,7 @@ namespace DeterministicChaos.Content.Subworlds
         public override bool CanKillTile(int i, int j, int type, ref bool blockDamaged)
         {
             // Prevent breaking any tiles in Dark World
-            if (SubworldSystem.IsActive<DarkDimension>())
+            if (DarkDimension.IsInDarkWorld)
                 return false;
             
             return base.CanKillTile(i, j, type, ref blockDamaged);
@@ -18,7 +18,7 @@ namespace DeterministicChaos.Content.Subworlds
         public override bool CanReplace(int i, int j, int type, int tileTypeBeingPlaced)
         {
             // Prevent replacing tiles in Dark World
-            if (SubworldSystem.IsActive<DarkDimension>())
+            if (DarkDimension.IsInDarkWorld)
                 return false;
             
             return base.CanReplace(i, j, type, tileTypeBeingPlaced);

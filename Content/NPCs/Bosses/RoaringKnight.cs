@@ -1,6 +1,8 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using System;
 using System.IO;
+using System.Reflection;
 using Terraria;
 using Terraria.Audio;
 using Terraria.GameContent;
@@ -56,6 +58,9 @@ namespace DeterministicChaos.Content.NPCs.Bosses
 
         private const int AttackStartDelay = 60;
 
+        // Returns the current attack start delay, halved when below 50% health.
+        private int CurrentAttackDelay => NPC.life < NPC.lifeMax * 0.5f ? AttackStartDelay / 2 : AttackStartDelay;
+
         private const int FrameW = 100;
         private const int FrameH = 100;
 
@@ -90,6 +95,8 @@ namespace DeterministicChaos.Content.NPCs.Bosses
         private const int MajorTransitionDuration = 120; // Delay between phases (2 seconds)
         private const int MajorPhase2Duration = 600;
         private const int MajorTotalDuration = 1320;
+        private const float FinalStandDurationSeconds = 44.27f;
+        private const float FinalStandDurationTicks = FinalStandDurationSeconds * 60f;
 
         private const float MajorSphereRadiusMin = 0f;
         private const float MajorSphereRadiusMax = 150f;
@@ -110,14 +117,30 @@ namespace DeterministicChaos.Content.NPCs.Bosses
 
         private Vector2 ballPivot;
         private Vector2 ballTarget;
+        private Vector2 dashTargetPos; // the position the boss dashes toward (opposite side of player)
+        private Vector2 dashStartPos;  // position at the start of the current dash (for position lerp)
         private int sphereCyclesDone;
+        private int sphereDashCount; // tracks multi-dash progress within one sphere phase
+        private bool isDashing; // true during the dash portion of sphere phase (for contact damage)
+
+        // Calamity difficulty cache
+        private bool calDiffCached;
+        private bool isRevengeance;
+        private bool isDeath;
 
         private AttackKind currentAttack;
         private int usedAttackMask;
         private bool majorUsed;
         private Vector2 majorAnchor;
 
+        // ── Arena ──
+        private BossArenaSystem.ArenaBox arenaBox;
+        private bool splitScreenArenaOverride;
+        private bool dashArenaOverride;
+        private bool finalStandArenaOverride;
+
         private Vector2 slashAnchor;
+        private int slashTargetPlayer = -1;
         private float slashBaseAngle;
         private float slashOmega;
         private int slashWaveIndex;
@@ -127,6 +150,9 @@ namespace DeterministicChaos.Content.NPCs.Bosses
         private bool slashAnimLooping;
 
         private bool splitSpawned;
+        private bool allPlayersDead;
+        private bool hasEnteredEnrage;
+        private bool hasPlayedDeathSound;
 
         private int knifeWaveIndex;
         private int nextKnifeWaveTick;
@@ -140,7 +166,13 @@ namespace DeterministicChaos.Content.NPCs.Bosses
         private int majorKnifeSpawnTick;
         private bool majorWindupComplete;
         private bool majorInFinalPhase;
+        private bool majorRoarPlayed;
         private int coneVisualId = -1;
+        private bool finalStandSequenceStarted;
+        private int finalStandTimer;
+        private int finalStandStartLife;
+
+        public bool IsInFinalStand => finalStandSequenceStarted && State == MainState.MajorCentered;
 
         private enum AnimKind
         {
@@ -198,8 +230,8 @@ namespace DeterministicChaos.Content.NPCs.Bosses
             NPC.height = 80;
 
             NPC.damage = 54;
-            NPC.defense = 120;
-            NPC.lifeMax = 88000;
+            NPC.defense = 80;
+            NPC.lifeMax = 42000;
 
             NPC.boss = true;
             NPC.npcSlots = 15f;
@@ -224,14 +256,14 @@ namespace DeterministicChaos.Content.NPCs.Bosses
 
         public override void ModifyHitByItem(Player player, Item item, ref NPC.HitModifiers modifiers)
         {
-            // Don't completely nullify damage, just apply high defense
-            // The 100 defense will reduce damage significantly
+            if (IsInFinalStand)
+                modifiers.FinalDamage *= 0f;
         }
 
         public override void ModifyHitByProjectile(Projectile projectile, ref NPC.HitModifiers modifiers)
         {
-            // Don't completely nullify damage, just apply high defense
-            // The 100 defense will reduce damage significantly
+            if (IsInFinalStand)
+                modifiers.FinalDamage *= 0f;
         }
 
         public override void SendExtraAI(BinaryWriter writer)
@@ -245,6 +277,7 @@ namespace DeterministicChaos.Content.NPCs.Bosses
             writer.WriteVector2(majorAnchor);
 
             writer.WriteVector2(slashAnchor);
+            writer.Write(slashTargetPlayer);
             writer.Write(slashBaseAngle);
             writer.Write(slashOmega);
             writer.Write(slashWaveIndex);
@@ -266,6 +299,9 @@ namespace DeterministicChaos.Content.NPCs.Bosses
             writer.Write(majorKnifeSpawnTick);
             writer.Write(majorWindupComplete);
             writer.Write(majorInFinalPhase);
+            writer.Write(finalStandSequenceStarted);
+            writer.Write(finalStandTimer);
+            writer.Write(finalStandStartLife);
             
             // Animation state sync
             writer.Write((int)animKind);
@@ -274,6 +310,10 @@ namespace DeterministicChaos.Content.NPCs.Bosses
             writer.Write(hideKnightSprite);
             writer.Write(transformToBall);
             writer.Write(transformFromBall);
+            writer.Write(sphereDashCount);
+            writer.Write(isDashing);
+            writer.WriteVector2(dashStartPos);
+            writer.WriteVector2(dashTargetPos);
         }
 
         public override void ReceiveExtraAI(BinaryReader reader)
@@ -287,6 +327,7 @@ namespace DeterministicChaos.Content.NPCs.Bosses
             majorAnchor = reader.ReadVector2();
 
             slashAnchor = reader.ReadVector2();
+            slashTargetPlayer = reader.ReadInt32();
             slashBaseAngle = reader.ReadSingle();
             slashOmega = reader.ReadSingle();
             slashWaveIndex = reader.ReadInt32();
@@ -308,6 +349,9 @@ namespace DeterministicChaos.Content.NPCs.Bosses
             majorKnifeSpawnTick = reader.ReadInt32();
             majorWindupComplete = reader.ReadBoolean();
             majorInFinalPhase = reader.ReadBoolean();
+            finalStandSequenceStarted = reader.ReadBoolean();
+            finalStandTimer = reader.ReadInt32();
+            finalStandStartLife = reader.ReadInt32();
             
             // Animation state sync
             animKind = (AnimKind)reader.ReadInt32();
@@ -316,12 +360,42 @@ namespace DeterministicChaos.Content.NPCs.Bosses
             hideKnightSprite = reader.ReadBoolean();
             transformToBall = reader.ReadBoolean();
             transformFromBall = reader.ReadBoolean();
+            sphereDashCount = reader.ReadInt32();
+            isDashing = reader.ReadBoolean();
+            dashStartPos = reader.ReadVector2();
+            dashTargetPos = reader.ReadVector2();
         }
 
         public override void AI()
         {
             // Enable background
-            RoaringKnightBackgroundSystem.ShowBackground = true;
+            // (background is now part of the arena box)
+
+            // Create arena once on first tick
+            if (arenaBox == null)
+            {
+                NPC.TargetClosest(true);
+                Player summoner = Main.player[NPC.target];
+                Vector2 bottomCenter = summoner.Center + new Vector2(0f, 5f * 16f);
+                arenaBox = BossArenaSystem.CreateArena(bottomCenter, 2000f, 2000f, () => !NPC.active);
+                arenaBox.BackgroundTexturePath = "DeterministicChaos/Content/NPCs/Bosses/BossBG";
+                arenaBox.BackgroundTint = Color.White;
+                NPC.Center = arenaBox.Center;
+            }
+
+            // Shrink arena: 2000 at 50% HP → 1000 at 10% HP
+            if (!splitScreenArenaOverride && !dashArenaOverride && !finalStandArenaOverride)
+            {
+                float hpRatio = NPC.life / (float)NPC.lifeMax;
+                float shrinkProgress = MathHelper.Clamp((0.5f - hpRatio) / 0.4f, 0f, 1f);
+                float currentHalf = MathHelper.Lerp(1000f, 650f, shrinkProgress);
+                arenaBox.TargetHalfWidth = currentHalf;
+                arenaBox.TargetHalfHeight = currentHalf;
+
+                // Scale warp intensity with HP: 1.0 at full → 3.0 at 10% HP
+                arenaBox.BackgroundWarpIntensity = MathHelper.Lerp(1f, 3f, shrinkProgress);
+                arenaBox.BackgroundScrollSpeed = MathHelper.Lerp(200f, 500f, shrinkProgress);
+            }
             
             if (!trailInit)
             {
@@ -337,6 +411,24 @@ namespace DeterministicChaos.Content.NPCs.Bosses
                 trailInit = true;
             }
 
+            if (!calDiffCached)
+            {
+                calDiffCached = true;
+                if (ModLoader.TryGetMod("CalamityMod", out Mod cal))
+                {
+                    Type calWorldType = cal.Code?.GetType("CalamityMod.World.CalamityWorld");
+                    if (calWorldType != null)
+                    {
+                        var revengeField = calWorldType.GetField("revenge", BindingFlags.Public | BindingFlags.Static);
+                        var deathField = calWorldType.GetField("death", BindingFlags.Public | BindingFlags.Static);
+                        if (revengeField != null)
+                            isRevengeance = (bool)revengeField.GetValue(null);
+                        if (deathField != null)
+                            isDeath = (bool)deathField.GetValue(null);
+                    }
+                }
+            }
+
             if (NPC.target < 0 || NPC.target == 255 || Main.player[NPC.target].dead)
                 NPC.TargetClosest(faceTarget: true);
 
@@ -344,16 +436,44 @@ namespace DeterministicChaos.Content.NPCs.Bosses
 
             if (player.dead)
             {
-                NPC.velocity.Y -= 0.2f;
-                if (NPC.timeLeft > 30) NPC.timeLeft = 30;
-                RoaringKnightBackgroundSystem.ShowBackground = false;
-                CacheTrail();
-                return;
+                // Check if ALL players are dead, if so, despawn
+                bool anyAlive = false;
+                for (int i = 0; i < Main.maxPlayers; i++)
+                {
+                    if (Main.player[i].active && !Main.player[i].dead)
+                    {
+                        anyAlive = true;
+                        break;
+                    }
+                }
+
+                if (!anyAlive)
+                {
+                    allPlayersDead = true;
+                    NPC.velocity.Y -= 0.4f;
+                    NPC.EncourageDespawn(30);
+                    CacheTrail();
+                    return;
+                }
+
+                // Target player is dead but others are alive, retarget
+                NPC.TargetClosest(faceTarget: true);
+                player = Main.player[NPC.target];
             }
 
             EnsureSingleSphereExists();
             TryEnterMajorPhase();
             UpdateSphereVisibilityAndDamage();
+
+            // Play hurt sound when dropping below 50% for the first time
+            if (!hasEnteredEnrage && NPC.life < NPC.lifeMax * 0.5f)
+            {
+                hasEnteredEnrage = true;
+                SoundEngine.PlaySound(new SoundStyle("DeterministicChaos/Assets/Sounds/KnightHurt")
+                {
+                    Volume = 1.0f
+                });
+            }
 
             Lighting.AddLight(NPC.Center, 0.9f, 0.75f, 0.35f);
 
@@ -404,7 +524,14 @@ namespace DeterministicChaos.Content.NPCs.Bosses
             Player targetPlayer = GetClosestPlayer();
             Vector2 targetPos = targetPlayer != null ? targetPlayer.Center : NPC.Center;
 
-            majorAnchor = targetPos + new Vector2(0f, -500f);
+            // End dash arena override before locking majorAnchor.
+            if (arenaBox != null && dashArenaOverride)
+            {
+                dashArenaOverride = false;
+                arenaBox.LerpSpeed = 0.02f;
+            }
+
+            majorAnchor = arenaBox != null ? arenaBox.Center : (targetPos + new Vector2(0f, -500f));
             
             State = MainState.MajorCentered;
             Timer = 0f;
@@ -416,6 +543,14 @@ namespace DeterministicChaos.Content.NPCs.Bosses
             majorKnifeSpawnTick = 0;
             majorWindupComplete = false;
             majorInFinalPhase = false;
+            majorRoarPlayed = false;
+            finalStandSequenceStarted = false;
+            finalStandTimer = 0;
+            finalStandStartLife = 0;
+            // Only trigger final-stand music/drain when entering due to very low HP.
+            // Entering via cycle count is a normal mid-fight major phase.
+            if (forceAtLowHp)
+                StartFinalStand();
             
             // CRITICAL: Force these flags to prevent sphere transformation
             hideKnightSprite = false; // Keep knight visible
@@ -430,7 +565,7 @@ namespace DeterministicChaos.Content.NPCs.Bosses
             
             majorUsed = true;
             NPC.defense = (int)(NPC.defense/2);
-            
+
             NPC.netUpdate = true;
         }
 
@@ -485,6 +620,12 @@ namespace DeterministicChaos.Content.NPCs.Bosses
             sphere.dontTakeDamage = !vulnerable;
             sphere.chaseable = vulnerable;
             sphere.alpha = vulnerable ? 0 : 255;
+
+            // High contact damage during dash, zero otherwise
+            if (isDashing && vulnerable)
+                sphere.damage = 120;
+            else
+                sphere.damage = 0;
         }
 
         private Player GetClosestPlayer()
@@ -511,22 +652,47 @@ namespace DeterministicChaos.Content.NPCs.Bosses
 
         public override void OnKill()
         {
-            RoaringKnightBackgroundSystem.ShowBackground = false;
-            
             // Mark as defeated for Boss Checklist (world-persistent)
             Systems.ERAMProgressSystem.RoaringKnightDefeated = true;
+        }
+
+        public override void BossLoot(ref string name, ref int potionType)
+        {
+            potionType = ItemID.GreaterHealingPotion;
         }
         
         public override void ModifyNPCLoot(NPCLoot npcLoot)
         {
-            // Greater Healing Potions (5-10)
-            npcLoot.Add(ItemDropRule.Common(ItemID.GreaterHealingPotion, 1, 5, 10));
-            
+            // Boss bag (Expert/Master/Revengeance/Death)
+            var bagRule = new LeadingConditionRule(new Items.BagDropCondition());
+            bagRule.OnSuccess(ItemDropRule.Common(ModContent.ItemType<Items.KnightBossBag>()));
+            npcLoot.Add(bagRule);
+
+            // Trophy (10% chance on any difficulty)
+            npcLoot.Add(ItemDropRule.Common(ModContent.ItemType<Trophies.KnightTrophy>(), 10));
+
+            // Relic (Master mode only)
+            npcLoot.Add(ItemDropRule.MasterModeCommonDrop(ModContent.ItemType<Trophies.KnightRelic>()));
+
+            // Normal mode direct drops (bag handles Expert+/Rev+)
+            var directDrop = new LeadingConditionRule(new Items.DirectDropCondition());
+
             // Dark Fragments (30-40)
-            npcLoot.Add(ItemDropRule.Common(ModContent.ItemType<DarkFragment>(), 1, 30, 40));
+            directDrop.OnSuccess(ItemDropRule.Common(ModContent.ItemType<DarkFragment>(), 1, 30, 40));
             
             // Dark Shard weapon (guaranteed)
-            npcLoot.Add(ItemDropRule.Common(ModContent.ItemType<DarkShard>(), 1));
+            directDrop.OnSuccess(ItemDropRule.Common(ModContent.ItemType<DarkShard>(), 1));
+
+            // Always drop one of Rod of Stagnation or Roaring Shield.
+            directDrop.OnSuccess(ItemDropRule.OneFromOptions(1,
+                ModContent.ItemType<Items.RodOfStagnation>(),
+                ModContent.ItemType<Items.RoaringShield>()));
+
+            // Ring and Lens drop independently at random (25% each).
+            directDrop.OnSuccess(ItemDropRule.Common(ModContent.ItemType<Items.RoaringRing>(), 4));
+            directDrop.OnSuccess(ItemDropRule.Common(ModContent.ItemType<Items.RoaringLens>(), 4));
+
+            npcLoot.Add(directDrop);
         }
 
         private Player GetRandomAlivePlayer()
@@ -591,13 +757,20 @@ namespace DeterministicChaos.Content.NPCs.Bosses
 
         private int GetAttackDuration(AttackKind kind)
         {
-            if (kind == AttackKind.SeekingExplosives) return 240;
-            if (kind == AttackKind.SpinningSlash) return 160 + 5 * 120;
-            if (kind == AttackKind.SplitScreen) return 400;
-            if (kind == AttackKind.SeekingKnives) return 540;
-            if (kind == AttackKind.KnifeLattice) return 600;
-            if (kind == AttackKind.AttackCentered) return 1200;
-            return 240;
+            int dur;
+            if (kind == AttackKind.SeekingExplosives) dur = 240;
+            else if (kind == AttackKind.SpinningSlash) dur = 160 + 5 * 120;
+            else if (kind == AttackKind.SplitScreen) dur = 500;
+            else if (kind == AttackKind.SeekingKnives) dur = 540;
+            else if (kind == AttackKind.KnifeLattice) dur = 600;
+            else if (kind == AttackKind.AttackCentered) dur = 1200;
+            else dur = 240;
+
+            // Rev/Death enraged: 20% faster attacks
+            if ((isRevengeance || isDeath) && NPC.life < NPC.lifeMax * 0.5f)
+                dur = (int)(dur * 0.8f);
+
+            return dur;
         }
 
         private void DoNormalAttack()
@@ -614,6 +787,9 @@ namespace DeterministicChaos.Content.NPCs.Bosses
 
             Player p = GetClosestPlayer();
 
+            bool enragedAttack = NPC.life < NPC.lifeMax * 0.5f;
+            int attackDelay = CurrentAttackDelay;
+
             Timer++;
 
             if (Timer == 1f)
@@ -623,7 +799,7 @@ namespace DeterministicChaos.Content.NPCs.Bosses
                 {
                     slashWaveTimer = 0;
                     slashWaveIndex = 0;
-                    nextSlashWaveTick = (int)(AttackStartDelay + 1f);
+                    nextSlashWaveTick = (int)(attackDelay + 1f);
                     splitSpawned = false;
                 }
 
@@ -631,16 +807,16 @@ namespace DeterministicChaos.Content.NPCs.Bosses
                 else if (currentAttack == AttackKind.SeekingKnives)
                 {
                     knifeWaveIndex = 0;
-                    nextKnifeWaveTick = (int)(AttackStartDelay + 1f);
+                    nextKnifeWaveTick = (int)(attackDelay + 1f);
                 }
                 else if (currentAttack == AttackKind.KnifeLattice)
                 {
                     latticeWaveIndex = 0;
-                    nextLatticeWaveTick = (int)(AttackStartDelay + 1f);
+                    nextLatticeWaveTick = (int)(attackDelay + 1f);
                 }
             }
 
-            if (Timer > AttackStartDelay)
+            if (Timer > attackDelay)
             {
                 if (currentAttack == AttackKind.SeekingExplosives)
                 {
@@ -656,7 +832,7 @@ namespace DeterministicChaos.Content.NPCs.Bosses
                 }
                 else if (currentAttack == AttackKind.SpinningSlash)
                 {
-                    if (Timer == AttackStartDelay + 1f)
+                    if (Timer == attackDelay + 1f)
                         InitSpinningSlash();
 
                     animKind = AnimKind.Attack2Slash;
@@ -665,7 +841,7 @@ namespace DeterministicChaos.Content.NPCs.Bosses
                 }
                 else if (currentAttack == AttackKind.SplitScreen)
                 {
-                    if (Timer == AttackStartDelay + 1f)
+                    if (Timer == attackDelay + 1f)
                         InitSplitScreen();
 
                     animKind = AnimKind.Attack2Slash;
@@ -699,7 +875,7 @@ namespace DeterministicChaos.Content.NPCs.Bosses
             }
 
             float distToUse = NormalDesiredDist;
-            if (Timer > AttackStartDelay)
+            if (Timer > attackDelay)
             {
                 if (currentAttack == AttackKind.SpinningSlash || currentAttack == AttackKind.SplitScreen)
                     distToUse = 260f;
@@ -711,7 +887,7 @@ namespace DeterministicChaos.Content.NPCs.Bosses
 
             MoveKeepDistance(p, distToUse);
 
-            if (Timer >= AttackStartDelay + GetAttackDuration(currentAttack))
+            if (Timer >= attackDelay + GetAttackDuration(currentAttack))
             {
                 if (animKind == AnimKind.Attack2Slash)
                     animKind = AnimKind.Idle;
@@ -725,6 +901,11 @@ namespace DeterministicChaos.Content.NPCs.Bosses
 
                 State = MainState.PostAttackFollow;
                 Timer = 0f;
+
+                // Restore arena size after split screen
+                if (currentAttack == AttackKind.SplitScreen)
+                    splitScreenArenaOverride = false;
+
                 NPC.netUpdate = true;
             }
         }
@@ -737,20 +918,33 @@ namespace DeterministicChaos.Content.NPCs.Bosses
 
             MoveKeepDistance(p, NormalDesiredDist);
 
-            if (Timer >= PostAttackFollowTime)
+            bool enraged = NPC.life < NPC.lifeMax * 0.5f;
+            bool revOrDeath = isRevengeance || isDeath;
+            int followTime;
+            if (revOrDeath)
+                followTime = enraged ? (isDeath ? 30 : 40) : (isDeath ? 45 : 60);
+            else
+                followTime = enraged ? PostAttackFollowTime / 2 : PostAttackFollowTime;
+
+            // Extra grace after SpinningSlash and SeekingExplosives
+            if (currentAttack == AttackKind.SpinningSlash || currentAttack == AttackKind.SeekingExplosives)
+                followTime += 120;
+
+            if (Timer >= followTime)
             {
                 State = MainState.SpherePhase;
                 Timer = 0f;
+                sphereDashCount = 0;
 
                 transformToBall = true;
                 transformFromBall = false;
                 hideKnightSprite = false;
                 
-                // Play transform sound
+                // Play transform sound (non-positional so all players hear it)
                 SoundEngine.PlaySound(new SoundStyle("DeterministicChaos/Assets/Sounds/KnightTransform")
                 {
                     Volume = 0.8f
-                }, NPC.Center);
+                });
 
                 animKind = AnimKind.Transform;
                 animDir = +1;
@@ -763,6 +957,15 @@ namespace DeterministicChaos.Content.NPCs.Bosses
                 ballTarget = dashTarget.Center;
 
                 NPC.velocity *= 0.1f;
+
+                // Shrink arena to 500x500 for dash phase, player dodges left/right
+                if (arenaBox != null)
+                {
+                    dashArenaOverride = true;
+                    arenaBox.TargetHalfWidth = 500f;
+                    arenaBox.TargetHalfHeight = 500f;
+                    arenaBox.LerpSpeed = 0.06f; // fast transition
+                }
 
                 NPC.netUpdate = true;
             }
@@ -787,21 +990,66 @@ namespace DeterministicChaos.Content.NPCs.Bosses
                 }
                 else
                 {
-                    NPC.velocity *= 0.9f;
+                    // Smoothly converge toward arena center during transform animation
+                    if (dashArenaOverride && arenaBox != null)
+                    {
+                        NPC.Center = Vector2.Lerp(NPC.Center, arenaBox.Center, 0.08f);
+                        NPC.velocity *= 0.85f;
+                    }
+                    else
+                    {
+                        NPC.velocity *= 0.9f;
+                    }
                     return;
                 }
             }
 
             Timer++;
 
-            if (Timer <= OrbitDuration)
+            bool enraged = NPC.life < NPC.lifeMax * 0.5f;
+            bool revOrDeath = isRevengeance || isDeath;
+
+            // Dash parameters scale with difficulty and health
+            int orbitDur, lingerDur, dashDur, maxDashes;
+            float dashSpeed;
+
+            if (revOrDeath)
             {
-                float t = Timer / OrbitDuration;
+                // Rev/Death: no orbit windup, brief pause, faster when enraged
+                orbitDur = 0;
+                lingerDur = enraged ? (isDeath ? 10 : 15) : (isDeath ? 25 : 30);
+                dashDur = enraged ? (isDeath ? 22 : 28) : (isDeath ? 32 : 48);
+                dashSpeed = 0f; // unused, velocity computed from distance/dashDur
+                maxDashes = enraged ? 6 : 4;
+            }
+            else if (enraged)
+            {
+                orbitDur = OrbitDuration * 2 / 3;
+                lingerDur = 30;
+                dashDur = 38;
+                dashSpeed = 0f;
+                maxDashes = 3;
+            }
+            else
+            {
+                orbitDur = OrbitDuration;
+                lingerDur = 45;
+                dashDur = 50;
+                dashSpeed = 0f;
+                maxDashes = 2;
+            }
+
+            // Orbit phase: spiral outward from pivot (skipped in Rev/Death)
+            if (orbitDur > 0 && Timer <= orbitDur)
+            {
+                isDashing = false;
+                NPC.localAI[0] = 0f;
+                float t = Timer / orbitDur;
                 float ease = t * t;
                 float radius = MathHelper.Lerp(OrbitRadiusStart, OrbitRadiusEnd, ease);
 
                 float loops = 1.25f;
-                float angular = (MathHelper.TwoPi * loops) / OrbitDuration;
+                float angular = (MathHelper.TwoPi * loops) / orbitDur;
                 float phase = NPC.whoAmI * 0.7f;
 
                 float angle = phase + Timer * angular;
@@ -813,28 +1061,80 @@ namespace DeterministicChaos.Content.NPCs.Bosses
                 return;
             }
 
-            if (Timer < OrbitDuration + LingerAfterOrbit)
+            // Linger phase: hold at current position (which is the dash start)
+            if (Timer < orbitDur + lingerDur)
             {
-                NPC.velocity *= 0.85f;
+                isDashing = false;
+                NPC.localAI[0] = 0f;
+
+                // On first linger tick of the very first dash, choose a starting position
+                if (sphereDashCount == 0 && (Timer == orbitDur + 1 || (orbitDur == 0 && Timer == 1)))
+                {
+                    Player lingerTarget = GetRandomAlivePlayer();
+                    float angleBias = Main.rand.NextBool()
+                        ? Main.rand.NextFloat(-MathHelper.PiOver4 * 3f, -MathHelper.PiOver4)
+                        : Main.rand.NextFloat(MathHelper.PiOver4, MathHelper.PiOver4 * 3f);
+                    float dist = Main.rand.NextFloat(350f, 550f);
+                    ballTarget = lingerTarget.Center + new Vector2((float)Math.Cos(angleBias), (float)Math.Sin(angleBias)) * dist;
+                }
+
+                // Smoothly decelerate and hold at ballTarget
+                // If too far from player, drift ballTarget toward player to maintain 700px max distance
+                Player trackTarget = GetRandomAlivePlayer();
+                if (trackTarget != null)
+                {
+                    float distToPlayer = Vector2.Distance(ballTarget, trackTarget.Center);
+                    if (distToPlayer > 400f)
+                    {
+                        Vector2 dir = (trackTarget.Center - ballTarget).SafeNormalize(Vector2.Zero);
+                        ballTarget += dir * (distToPlayer - 400f) * 0.1f;
+                    }
+                }
+
+                Vector2 toTarget = ballTarget - NPC.Center;
+                float lingerT = (Timer - orbitDur) / (float)lingerDur;
+                if (toTarget.Length() > 4f)
+                {
+                    float moveStrength = MathHelper.Lerp(0.08f, 0.2f, lingerT);
+                    NPC.velocity = toTarget * moveStrength;
+                }
+                else
+                {
+                    NPC.velocity *= 0.85f;
+                }
+
                 return;
             }
 
-            int dashTick = OrbitDuration + LingerAfterOrbit;
+            int dashTick = orbitDur + lingerDur;
 
+            // Dash start: calculate opposite position through player and set constant velocity
             if (Timer == dashTick)
             {
-                // Play dash sound
+                isDashing = true;
+                NPC.localAI[0] = 1f;
+
                 Player dashTarget = GetRandomAlivePlayer();
-                ballTarget = dashTarget.Center;
+
                 SoundEngine.PlaySound(new SoundStyle("DeterministicChaos/Assets/Sounds/KnightDash")
                 {
                     Volume = 0.8f
-                }, NPC.Center);
-                
-                Vector2 dashDir = (ballTarget - NPC.Center).SafeNormalize(Vector2.UnitX);
-                NPC.velocity = dashDir * BallDashSpeed;
-                
-                // Spawn 5 shockwave lines at dash start
+                });
+
+                // Reflect position through player, capped at 700px from player
+                Vector2 offset = NPC.Center - dashTarget.Center;
+                Vector2 reflected = dashTarget.Center - offset;
+                float reflectedDist = Vector2.Distance(reflected, dashTarget.Center);
+                if (reflectedDist > 400f)
+                    reflected = dashTarget.Center + (reflected - dashTarget.Center).SafeNormalize(Vector2.Zero) * 400f;
+                dashTargetPos = reflected;
+                dashStartPos = NPC.Center;
+
+                // Velocity hint for initial frame (position lerp handles actual movement)
+                Vector2 travel = dashTargetPos - dashStartPos;
+                NPC.velocity = travel / dashDur;
+
+                // Spawn shockwave lines at dash start
                 if (Main.netMode != NetmodeID.MultiplayerClient)
                 {
                     int shockwaveType = ModContent.ProjectileType<ShockwaveLine>();
@@ -842,8 +1142,8 @@ namespace DeterministicChaos.Content.NPCs.Bosses
                     {
                         float angle = Main.rand.NextFloat(0f, MathHelper.TwoPi);
                         Vector2 dir = new Vector2(1f, 0f).RotatedBy(angle);
-                        float speed = Main.rand.NextFloat(12f, 20f); // Medium speed
-                        
+                        float speed = Main.rand.NextFloat(12f, 20f);
+
                         Projectile.NewProjectile(
                             NPC.GetSource_FromAI(),
                             NPC.Center,
@@ -853,24 +1153,53 @@ namespace DeterministicChaos.Content.NPCs.Bosses
                             0f,
                             Main.myPlayer,
                             speed,
-                            Main.rand.NextFloat(15f, 30f) // Short to medium length
+                            Main.rand.NextFloat(15f, 30f)
                         );
                     }
                 }
-                
+
                 NPC.netUpdate = true;
             }
 
-            if (Timer >= dashTick + DashDuration)
+            // During dash: compute velocity so Terraria's built-in position += velocity
+            // lands the NPC at the correct smoothstepped position each tick.
+            if (Timer > dashTick && Timer < dashTick + dashDur)
             {
+                float dashProgress = (Timer - dashTick) / (float)dashDur;
+                float easeFactor = dashProgress * dashProgress * (3f - 2f * dashProgress);
+                Vector2 desiredPos = Vector2.Lerp(dashStartPos, dashTargetPos, easeFactor);
+                // Let Terraria apply velocity to reach the desired position (self-correcting)
+                NPC.velocity = desiredPos - NPC.Center;
+            }
+
+            // End of dash, boss is now at the reflected position
+            if (Timer >= dashTick + dashDur)
+            {
+                isDashing = false;
+                NPC.localAI[0] = 0f;
+                NPC.velocity *= 0.1f;
+                sphereDashCount++;
+
+                // The boss's current position becomes the start of the next dash
+                ballTarget = NPC.Center;
+
+                // Loop back for more dashes, skip orbit, go to linger at current position
+                if (sphereDashCount < maxDashes)
+                {
+                    Timer = orbitDur; // jump to linger phase start
+                    NPC.netUpdate = true;
+                    return;
+                }
+
                 hideKnightSprite = false;
                 transformFromBall = true;
+                NPC.localAI[0] = 0f;
                 
-                // Play transform sound
+                // Play transform sound (non-positional so all players hear it)
                 SoundEngine.PlaySound(new SoundStyle("DeterministicChaos/Assets/Sounds/KnightTransform")
                 {
                     Volume = 0.8f
-                }, NPC.Center);
+                });
 
                 animKind = AnimKind.Transform;
                 animDir = -1;
@@ -882,18 +1211,53 @@ namespace DeterministicChaos.Content.NPCs.Bosses
 
                 sphereCyclesDone++;
 
+                // Restore arena after dash phase
+                if (arenaBox != null && dashArenaOverride)
+                {
+                    dashArenaOverride = false;
+                    arenaBox.LerpSpeed = 0.02f; // normal speed
+                }
+
                 NPC.netUpdate = true;
             }
         }
 
         private void DoMajorCentered()
         {
+            // If HP drops below final stand threshold during a normal center phase,
+            // restart the phase as final stand immediately.
+            if (!finalStandSequenceStarted && NPC.life <= (int)(NPC.lifeMax * MajorHealthThreshold))
+            {
+                Timer = 0f;
+                majorStarSpawnTick = 0;
+                majorStarAngle = 0f;
+                majorKnifeSpawnTick = 0;
+                majorWindupComplete = false;
+                majorInFinalPhase = false;
+                majorRoarPlayed = false;
+                StartFinalStand();
+
+                animKind = AnimKind.MajorWindup;
+                animDir = +1;
+                animRow = MajorWindupStartRow;
+                animTick = 0;
+
+                NPC.netUpdate = true;
+            }
+
             Timer++;
+
+            // Keep major anchor pinned to arena center in case another system shifts it.
+            if (arenaBox != null)
+                majorAnchor = arenaBox.Center;
             
             // FORCE these to stay false during entire major phase
             hideKnightSprite = false;
             transformToBall = false;
             transformFromBall = false;
+
+            if (finalStandSequenceStarted)
+                UpdateFinalStandCountdown();
 
             // Move to anchor position
             Vector2 toAnchor = majorAnchor - NPC.Center;
@@ -1001,23 +1365,21 @@ namespace DeterministicChaos.Content.NPCs.Bosses
             // Phase 2: Expel stars
             else if (Timer <= MajorPhase1Duration + MajorTransitionDuration + MajorPhase2Duration || majorInFinalPhase)
             {
-                if (!majorInFinalPhase && Timer == MajorPhase1Duration + MajorTransitionDuration + 1)
+                if (!majorRoarPlayed && Timer >= MajorPhase1Duration + MajorTransitionDuration + 1)
                 {
+                    majorRoarPlayed = true;
                     
                     // Start fire animation
                     animKind = AnimKind.MajorFire;
                     animDir = +1;
                     animRow = MajorFireStartRow;
                     animTick = 0;
-
-                    if(Timer == MajorPhase1Duration + MajorTransitionDuration - 10)
-                        AnimateStrip(ColMajorWindup, MajorWindupStartRow, 7);
                     
-                    // Play roar sound at start of expel phase
+                    // Play roar sound at start of expel phase (non-positional)
                     SoundEngine.PlaySound(new SoundStyle("DeterministicChaos/Assets/Sounds/KnightRoar")
                     {
                         Volume = 1.0f
-                    }, NPC.Center);
+                    });
                 }
                 
                 DoMajorExpelPhase(sphere);
@@ -1028,15 +1390,85 @@ namespace DeterministicChaos.Content.NPCs.Bosses
                     NPC.netUpdate = true;
                 }
                 
-                if (majorInFinalPhase)
+                if (majorInFinalPhase && isDeath)
                 {
                     DoMajorFinalPhaseKnives();
                 }
             }
             // Phase 3: Cleanup (only if above health threshold)
-            else if (!majorInFinalPhase)
+            else if (!majorInFinalPhase && !finalStandSequenceStarted)
             {
                 DoMajorCleanup(sphere);
+            }
+        }
+
+        private void StartFinalStand()
+        {
+            finalStandSequenceStarted = true;
+            finalStandTimer = 0;
+            finalStandStartLife = Math.Max(NPC.life, 1);
+
+            // Play hurt sound when entering final phase
+            SoundEngine.PlaySound(new SoundStyle("DeterministicChaos/Assets/Sounds/KnightHurt")
+            {
+                Volume = 1.0f
+            });
+
+            // Override arena sizing: expand back to max and shrink to min by split-screen time
+            finalStandArenaOverride = true;
+            if (arenaBox != null)
+            {
+                arenaBox.TargetHalfWidth  = 1000f;
+                arenaBox.TargetHalfHeight = 1000f;
+                arenaBox.LerpSpeed = 0.02f;
+            }
+        }
+
+        private void UpdateFinalStandCountdown()
+        {
+            if (!finalStandSequenceStarted)
+                StartFinalStand();
+
+            if (Main.netMode == NetmodeID.MultiplayerClient)
+                return;
+
+            finalStandTimer++;
+            float progress = MathHelper.Clamp(finalStandTimer / FinalStandDurationTicks, 0f, 1f);
+            int targetLife = (int)Math.Ceiling(MathHelper.Lerp(finalStandStartLife, 0f, progress));
+
+            if (NPC.life > targetLife)
+                NPC.life = targetLife;
+
+            // Arena: expand at start, slowly shrink to minimum by the time split slashes begin (T-10s)
+            if (finalStandArenaOverride && arenaBox != null)
+            {
+                float shrinkWindow = FinalStandDurationTicks - 10f * 60f; // ticks before slashes
+                float shrinkT = MathHelper.Clamp(finalStandTimer / shrinkWindow, 0f, 1f);
+                float half = MathHelper.Lerp(1000f, 550f, shrinkT);
+                arenaBox.TargetHalfWidth  = half;
+                arenaBox.TargetHalfHeight = half;
+                arenaBox.BackgroundWarpIntensity = MathHelper.Lerp(3f, 5f, shrinkT);
+                arenaBox.BackgroundScrollSpeed   = MathHelper.Lerp(500f, 800f, shrinkT);
+            }
+
+            DoFinalStandSplitScreen();
+
+            if (progress >= 1f)
+            {
+                NPC.life = 0;
+                NPC.checkDead();
+                NPC.netUpdate = true;
+            }
+
+            // Play death sound 1 second before actual death
+            float timeRemaining = FinalStandDurationTicks - finalStandTimer;
+            if (!hasPlayedDeathSound && timeRemaining <= 60f)
+            {
+                hasPlayedDeathSound = true;
+                SoundEngine.PlaySound(new SoundStyle("DeterministicChaos/Assets/Sounds/KnightDeath")
+                {
+                    Volume = 1.0f
+                });
             }
         }
 
@@ -1045,8 +1477,8 @@ namespace DeterministicChaos.Content.NPCs.Bosses
             if (Main.netMode == NetmodeID.MultiplayerClient || sphere == null)
                 return;
 
-            // Spawn 2 stars every 10 ticks and decrease as time goes on (much slower)
-            int spawnInterval = 10;
+            // Spawn 2 stars periodically, interval increases toward end of phase
+            int spawnInterval = 12;
             
             if ((int)Timer >= majorStarSpawnTick)
             {
@@ -1054,8 +1486,8 @@ namespace DeterministicChaos.Content.NPCs.Bosses
                 float progress = Timer / MajorPhase1Duration;
                 float angleStep = MathHelper.Lerp(MathHelper.Pi * 0.3f, MathHelper.Pi * 0.02f, progress);
 
-                // Update spawn interval for next time (decreases over time)
-                spawnInterval = (int)MathHelper.Lerp(10f, 4f, progress);
+                // Interval widens toward end: 12 ticks early → 20 ticks late (bigger gaps)
+                spawnInterval = (int)MathHelper.Lerp(12f, 20f, progress);
                 majorStarSpawnTick = (int)Timer + spawnInterval;
                 
                 // Spawn 2 stars from opposite sides
@@ -1065,10 +1497,10 @@ namespace DeterministicChaos.Content.NPCs.Bosses
                     
                     // Spawn much farther away from sphere
                     float spawnDist = 2000f;
-                    Vector2 spawnPos = sphere.Center + new Vector2(spawnDist, 0f).RotatedBy(angle);
+                    Vector2 spawnPos = majorAnchor + new Vector2(spawnDist, 0f).RotatedBy(angle);
                     
-                    // Direction towards sphere
-                    Vector2 dir = (sphere.Center - spawnPos).SafeNormalize(Vector2.UnitX);
+                    // Direction towards arena center
+                    Vector2 dir = (majorAnchor - spawnPos).SafeNormalize(Vector2.UnitX);
                     float speed = 22f;
                     
                     int proj = Projectile.NewProjectile(
@@ -1083,7 +1515,7 @@ namespace DeterministicChaos.Content.NPCs.Bosses
                     
                     if (proj >= 0 && proj < Main.maxProjectiles)
                     {
-                        Main.projectile[proj].ai[0] = sphere.whoAmI;
+                        Main.projectile[proj].ai[0] = NPC.whoAmI;
                         Main.projectile[proj].ai[1] = -1f;
                         Main.projectile[proj].ai[2] = 0f;
                         Main.projectile[proj].timeLeft = 300;
@@ -1097,10 +1529,7 @@ namespace DeterministicChaos.Content.NPCs.Bosses
 
         private void DoMajorExpelPhase(NPC sphere)
         {
-            if (Main.netMode == NetmodeID.MultiplayerClient || sphere == null)
-                return;
-            
-            // Add constant screen shake during expulsion
+            // Screen shake during expulsion, must run on clients, not server
             if (Main.netMode != NetmodeID.Server && Main.GameUpdateCount % 3 == 0)
             {
                 Main.instance.CameraModifiers.Add(new Terraria.Graphics.CameraModifiers.PunchCameraModifier(
@@ -1112,6 +1541,9 @@ namespace DeterministicChaos.Content.NPCs.Bosses
                     3000f // max distance
                 ));
             }
+
+            if (Main.netMode == NetmodeID.MultiplayerClient || sphere == null)
+                return;
             
             // Spawn shockwave VFX every 0.5 seconds during expel phase
             int expelPhaseTimer = (int)Timer - (MajorPhase1Duration + MajorTransitionDuration);
@@ -1129,10 +1561,10 @@ namespace DeterministicChaos.Content.NPCs.Bosses
                 );
             }
 
-            // Spawn 2 stars every 8 ticks (much slower)
-            int spawnInterval = 7;
+            // Spawn 2 stars periodically
+            int spawnInterval = 10;
             
-            if ((int)Timer >= majorStarSpawnTick)
+            if ((int)Timer >= majorStarSpawnTick && !(finalStandSequenceStarted && finalStandTimer >= FinalStandDurationTicks - 10f * 60f))
             {
                 majorStarSpawnTick = (int)Timer + spawnInterval;
                 
@@ -1140,25 +1572,27 @@ namespace DeterministicChaos.Content.NPCs.Bosses
                 int starPhaseTimer = (int)Timer - (MajorPhase1Duration + MajorTransitionDuration);
                 float progress = starPhaseTimer / (float)MajorPhase2Duration;
 
-                spawnInterval = (int)MathHelper.Lerp(7f, 2f, progress);
+                spawnInterval = (int)MathHelper.Lerp(10f, 4f, progress);
 
                 if (majorInFinalPhase)
                     progress = 1f; // Keep at minimum rotation in final phase
                     
                 float angleStep = MathHelper.Pi * 0.3f;
                 
-                // Spawn 2 stars from sphere center
+                // Spawn 2 stars from arena center
                 for (int i = 0; i < 2; i++)
                 {
                     float angle = majorStarAngle + (i * MathHelper.Pi);
                     
-                    // Direction away from sphere
+                    // Direction away from center
                     Vector2 dir = new Vector2(1f, 0f).RotatedBy(angle);
-                    float speed = 18f; // Increased from 12f
+                    float speed = 13f;
+                    
+                    Vector2 spawnPos = majorAnchor;
                     
                     int proj = Projectile.NewProjectile(
                         NPC.GetSource_FromAI(),
-                        sphere.Center,
+                        spawnPos,
                         dir * speed,
                         ModContent.ProjectileType<Projectile_Star>(),
                         54,
@@ -1236,6 +1670,43 @@ namespace DeterministicChaos.Content.NPCs.Bosses
                 if (id >= 0 && id < Main.maxProjectiles)
                     Main.projectile[id].netUpdate = true;
             }
+        }
+
+        private void DoFinalStandSplitScreen()
+        {
+            if (Main.netMode == NetmodeID.MultiplayerClient)
+                return;
+
+            // First 8 seconds: rotating split-screen; last 2 seconds: nothing
+            float windowStart = FinalStandDurationTicks - 10f * 60f;
+            float elapsed = finalStandTimer - windowStart;
+            float activeWindow = 8f * 60f; // 480 ticks
+
+            if (elapsed < 0f || elapsed >= activeWindow)
+                return;
+
+            // Spawn a pair every 8 ticks (~60 pairs over 8 seconds)
+            const int spawnInterval = 8;
+            if ((int)elapsed % spawnInterval != 0)
+                return;
+
+            Vector2 anchor = arenaBox != null ? arenaBox.Center : NPC.Center;
+
+            // Sweep CCW one full rotation over the 8-second window, starting vertically (PiOver2)
+            float t = elapsed / activeWindow;
+            float baseAngle = MathHelper.PiOver2 - MathHelper.TwoPi * t;
+
+            // 5-degree CCW rotation per indicator (as fraction of 90 degrees, negative = CCW on screen)
+            const float microRotation = -(5f / 90f);
+
+            int type = ModContent.ProjectileType<SliceIndicator>();
+            int dmg = 85;
+
+            int id0 = Projectile.NewProjectile(NPC.GetSource_FromAI(), anchor, Vector2.Zero, type, 0, 0f, Main.myPlayer, dmg, baseAngle, microRotation);
+            if (id0 >= 0 && id0 < Main.maxProjectiles) Main.projectile[id0].netUpdate = true;
+
+            int id1 = Projectile.NewProjectile(NPC.GetSource_FromAI(), anchor, Vector2.Zero, type, 0, 0f, Main.myPlayer, dmg, baseAngle + MathHelper.Pi, microRotation);
+            if (id1 >= 0 && id1 < Main.maxProjectiles) Main.projectile[id1].netUpdate = true;
         }
 
         private void DoMajorCleanup(NPC sphere)
@@ -1316,6 +1787,7 @@ namespace DeterministicChaos.Content.NPCs.Bosses
         private void InitSpinningSlash()
         {
             Player target = GetRandomAlivePlayer();
+            slashTargetPlayer = target.whoAmI;
             slashAnchor = target.Center;
 
             slashWaveIndex = 0;
@@ -1334,13 +1806,17 @@ namespace DeterministicChaos.Content.NPCs.Bosses
 
             slashBaseAngle = Main.rand.NextFloat(0f, MathHelper.TwoPi);
 
-            nextSlashWaveTick = (int)(AttackStartDelay + 1f);
+            nextSlashWaveTick = (int)(CurrentAttackDelay + 1f);
 
             NPC.netUpdate = true;
         }
 
         private void InitSplitScreen()
         {
+            Player target = GetRandomAlivePlayer();
+            slashTargetPlayer = target.whoAmI;
+            slashAnchor = target.Center;
+
             slashWaveIndex = 0;
             slashWaveTimer = 0;
             
@@ -1350,8 +1826,16 @@ namespace DeterministicChaos.Content.NPCs.Bosses
             int hold = 30;
             slashCycleTicks = 60 + 8 + hold;
             
-            nextSlashWaveTick = (int)(AttackStartDelay + 1f);
+            nextSlashWaveTick = (int)(CurrentAttackDelay + 1f);
             
+            // Shrink arena to 1000x1000 for split screen
+            splitScreenArenaOverride = true;
+            if (arenaBox != null)
+            {
+                arenaBox.TargetHalfWidth = 500f;
+                arenaBox.TargetHalfHeight = 500f;
+            }
+
             NPC.netUpdate = true;
         }
 
@@ -1360,7 +1844,7 @@ namespace DeterministicChaos.Content.NPCs.Bosses
             if (Main.netMode == NetmodeID.MultiplayerClient)
                 return;
 
-            int startTick = AttackStartDelay + 1;
+            int startTick = CurrentAttackDelay + 1;
             if ((int)Timer < startTick)
                 return;
 
@@ -1391,9 +1875,12 @@ namespace DeterministicChaos.Content.NPCs.Bosses
 
             slashWaveIndex++;
 
-            // Update anchor to current player position for each wave
-            Player target = GetRandomAlivePlayer();
-            Vector2 anchor = target.Center;
+            // Track the target player's current position
+            if (slashTargetPlayer >= 0 && slashTargetPlayer < Main.maxPlayers && Main.player[slashTargetPlayer].active && !Main.player[slashTargetPlayer].dead)
+                slashAnchor = Main.player[slashTargetPlayer].Center;
+
+            // Use tracked anchor centered on the target player
+            Vector2 anchor = slashAnchor;
 
             int dmg = 85;
             int type = ModContent.ProjectileType<SlashIndicator>();
@@ -1430,43 +1917,45 @@ namespace DeterministicChaos.Content.NPCs.Bosses
 
             slashWaveTimer++;
 
-            // Check if we should spawn next wave
             if ((int)Timer < nextSlashWaveTick)
                 return;
 
-            // Limit to 5 waves total
             if (slashWaveIndex >= 5)
                 return;
 
-            // Reset wave timer when spawning new wave
             slashWaveTimer = 0;
-
             slashWaveIndex++;
 
-            // Update target position for each wave
-            Player target = GetRandomAlivePlayer();
-            Vector2 anchor = target.Center;
+            // Center on arena
+            Vector2 anchor = arenaBox != null ? arenaBox.Center : NPC.Center;
 
-            // Random new base angle for each wave
-            float baseAngle = Main.rand.NextFloat(0f, MathHelper.TwoPi);
+            // Pick from straight and diagonal angles
+            float[] angleOptions = new float[]
+            {
+                0f,                          // horizontal
+                MathHelper.PiOver2,          // vertical
+                MathHelper.PiOver4,          // 45 degrees
+                MathHelper.PiOver4 * 3f      // 135 degrees
+            };
+            float baseAngle = angleOptions[Main.rand.Next(angleOptions.Length)];
+            // Add small random variance
+            baseAngle += Main.rand.NextFloat(-0.15f, 0.15f);
 
             int type = ModContent.ProjectileType<SliceIndicator>();
             int dmg = 85;
 
             float hp01 = NPC.life / (float)NPC.lifeMax;
             bool belowHalf = hp01 < 0.5f;
-            
-            // Below half health: spawn 2 sets of indicators instead of 1
+
             int sets = belowHalf ? 2 : 1;
-            
+
             for (int s = 0; s < sets; s++)
             {
-                float angleOffset = s * (MathHelper.PiOver2); // 90 degree offset for second set
-                
+                float angleOffset = s * MathHelper.PiOver2;
+
                 float a0 = baseAngle + angleOffset;
                 float a1 = baseAngle + MathHelper.Pi + angleOffset;
 
-                // Random rotation direction for both slices (same direction)
                 float rotationDirection = Main.rand.NextBool() ? 1f : -1f;
 
                 int id0 = Projectile.NewProjectile(NPC.GetSource_FromAI(), anchor.X, anchor.Y, 0f, 0f, type, 0, 0f, Main.myPlayer, dmg, a0, rotationDirection);
@@ -1476,7 +1965,6 @@ namespace DeterministicChaos.Content.NPCs.Bosses
                 if (id1 >= 0 && id1 < Main.maxProjectiles) Main.projectile[id1].netUpdate = true;
             }
 
-            // Schedule next wave
             nextSlashWaveTick = (int)Timer + slashCycleTicks;
         }
 
@@ -1492,20 +1980,16 @@ namespace DeterministicChaos.Content.NPCs.Bosses
             float hp01 = NPC.life / (float)NPC.lifeMax;
             float ramp = MathHelper.Clamp(1f - hp01, 0f, 1f);
 
-            int totalKnives = (int)MathHelper.Lerp(10f, 20f, ramp);
+            int totalKnives = (int)MathHelper.Lerp(10f, 30f, ramp);
 
             // Stop spawning after reaching total
             if (knifeWaveIndex >= totalKnives)
                 return;
 
-            // Below half health: spawn 2-3 knives instead of 1
-            int knivesPerWave = hp01 < 0.5f ? (hp01 < 0.25f ? 1 : 2) : 1;
-            
-            // Play knife spawn sound once per wave
-            SoundEngine.PlaySound(new SoundStyle("DeterministicChaos/Assets/Sounds/KnightKnifeSpawn")
-            {
-                Volume = 0.7f
-            }, NPC.Center);
+            // Always spawn 1 knife per wave (enrage uses faster intervals instead)
+            int knivesPerWave = 1;
+
+            // Sound is now played by SeekingKnife on its first AI tick (client-safe)
 
             for (int i = 0; i < knivesPerWave; i++)
             {
@@ -1533,8 +2017,8 @@ namespace DeterministicChaos.Content.NPCs.Bosses
             knifeWaveIndex++;
 
             // Calculate next spawn time with speed ramp
-            // Spawn interval: 60 ticks (1s) -> 20 ticks (0.33s) as health decreases
-            float minInterval = 40f;
+            // Interval shrinks as health decreases: 80 -> 40 ticks normally, down to 20 when enraged
+            float minInterval = hp01 < 0.5f ? 28f : 40f;
             float maxInterval = 80f;
             
             float progress = knifeWaveIndex / (float)totalKnives;
@@ -1552,50 +2036,80 @@ namespace DeterministicChaos.Content.NPCs.Bosses
             if ((int)Timer < nextLatticeWaveTick)
                 return;
 
-            // Calculate health-based parameters
             float hp01 = NPC.life / (float)NPC.lifeMax;
             float ramp = MathHelper.Clamp(1f - hp01, 0f, 1f);
 
             int totalWaves = (int)MathHelper.Lerp(5f, 12f, ramp);
 
-            // Stop spawning after reaching total
             if (latticeWaveIndex >= totalWaves)
                 return;
 
-            // Spawn ~25 knives in a lattice pattern aimed at random player
-            Player target = GetRandomAlivePlayer();
-            int targetIndex = target.whoAmI;
-
             int type = ModContent.ProjectileType<LatticeKnife>();
-            
-            // Spawn approximately 25 knives per wave
-            int knivesPerWave = 25 + (int)(ramp * 20f);
-            
+
+            int knivesPerWave = 19 + (int)(ramp * 3f);
+
+            // Arena bounds for spawning outside
+            float arenaLeft = arenaBox != null ? arenaBox.Center.X - arenaBox.HalfWidth : NPC.Center.X - 1000f;
+            float arenaRight = arenaBox != null ? arenaBox.Center.X + arenaBox.HalfWidth : NPC.Center.X + 1000f;
+            float arenaTop = arenaBox != null ? arenaBox.Center.Y - arenaBox.HalfHeight : NPC.Center.Y - 1000f;
+            float arenaBottom = arenaBox != null ? arenaBox.Center.Y + arenaBox.HalfHeight : NPC.Center.Y + 1000f;
+            Vector2 arenaCenter = arenaBox != null ? arenaBox.Center : NPC.Center;
+            float arenaW = arenaRight - arenaLeft;
+            float arenaH = arenaBottom - arenaTop;
+            float margin = 20f; // spawn right at the arena edge (slightly inward)
+
             for (int i = 0; i < knivesPerWave; i++)
             {
+                // Pick a random edge (0=top, 1=bottom, 2=left, 3=right)
+                int edge = Main.rand.Next(4);
+                Vector2 spawnPos;
+
+                switch (edge)
+                {
+                    case 0: // top
+                        spawnPos = new Vector2(Main.rand.NextFloat(arenaLeft, arenaRight), arenaTop - margin);
+                        break;
+                    case 1: // bottom
+                        spawnPos = new Vector2(Main.rand.NextFloat(arenaLeft, arenaRight), arenaBottom + margin);
+                        break;
+                    case 2: // left
+                        spawnPos = new Vector2(arenaLeft - margin, Main.rand.NextFloat(arenaTop, arenaBottom));
+                        break;
+                    default: // right
+                        spawnPos = new Vector2(arenaRight + margin, Main.rand.NextFloat(arenaTop, arenaBottom));
+                        break;
+                }
+
+                // Target a random position inside the arena
+                Vector2 targetPos = arenaCenter + new Vector2(
+                    Main.rand.NextFloat(-arenaW * 0.4f, arenaW * 0.4f),
+                    Main.rand.NextFloat(-arenaH * 0.4f, arenaH * 0.4f)
+                );
+
+                Vector2 dashDir = (targetPos - spawnPos).SafeNormalize(Vector2.UnitX);
+
                 int id = Projectile.NewProjectile(
                     NPC.GetSource_FromAI(),
-                    target.Center, // Will be repositioned in OnSpawn
+                    spawnPos,
                     Vector2.Zero,
                     type,
-                    131, // Damage (30% reduction)
+                    80,
                     0f,
                     Main.myPlayer,
-                    targetIndex
+                    -1f,              // ai[0] = -1 signals arena-based spawn
+                    dashDir.X,        // ai[1] = dash direction X
+                    dashDir.Y         // ai[2] = dash direction Y
                 );
 
                 if (id >= 0 && id < Main.maxProjectiles)
                     Main.projectile[id].netUpdate = true;
             }
-            
 
             latticeWaveIndex++;
 
-            // Calculate next spawn time with speed ramp
-            // Interval: 120 ticks (2s) -> 60 ticks (1s) as attack progresses
-            int minInterval = 80; // 1 second
-            int maxInterval = 150; // 2 seconds
-            
+            int minInterval = 80;
+            int maxInterval = 150;
+
             float progress = latticeWaveIndex / (float)totalWaves;
             float intervalT = 1f - (1f - progress) * (1f - progress);
             int interval = (int)MathHelper.Lerp(maxInterval, minInterval, intervalT);
@@ -1611,13 +2125,9 @@ namespace DeterministicChaos.Content.NPCs.Bosses
             float coneDegrees = 36f;
 
             // Spawn cone visual effect on first tick
-            if (Timer == AttackStartDelay + 1)
+            if (Timer == CurrentAttackDelay + 1)
             {
-                // Play energy charge sound
-                SoundEngine.PlaySound(new SoundStyle("DeterministicChaos/Assets/Sounds/KnightEnergyCharge")
-                {
-                    Volume = 0.8f
-                }, NPC.Center);
+                // Sound is now played by ConeVisualEffect on its first AI tick (client-safe)
                 
                 coneVisualId = Projectile.NewProjectile(
                     NPC.GetSource_FromAI(),
@@ -1793,6 +2303,10 @@ namespace DeterministicChaos.Content.NPCs.Bosses
 
         public override bool PreDraw(SpriteBatch spriteBatch, Vector2 screenPos, Color drawColor)
         {
+            // Red tint when Revengeance/Death and below 50% HP
+            bool revDeathEnraged = (isRevengeance || isDeath) && NPC.life < NPC.lifeMax * 0.5f;
+            Color spriteColor = revDeathEnraged ? new Color(255, 200, 200) : Color.White;
+
             // During major attack, always show the knight sprite using proper animations
             // hideKnightSprite should NEVER be true during MajorCentered state
             if (State == MainState.MajorCentered)
@@ -1807,7 +2321,7 @@ namespace DeterministicChaos.Content.NPCs.Bosses
 
                 SpriteEffects mainFx = (NPC.spriteDirection == 1) ? SpriteEffects.None : SpriteEffects.FlipHorizontally;
 
-                spriteBatch.Draw(tex, basePos, NPC.frame, Color.White, NPC.rotation, origin, NPC.scale, mainFx, 0f);
+                spriteBatch.Draw(tex, basePos, NPC.frame, spriteColor, NPC.rotation, origin, NPC.scale, mainFx, 0f);
 
                 return false;
             }
@@ -1826,6 +2340,8 @@ namespace DeterministicChaos.Content.NPCs.Bosses
             basePos2.Y += NPC.gfxOffY;
             basePos2 -= SpritePivotOffset * NPC.scale;
 
+            bool enragedTrail = NPC.life < NPC.lifeMax * 0.5f;
+
             for (int i = TrailLength - 1; i >= 1; i--)
             {
                 float t = i / (float)TrailLength;
@@ -1835,17 +2351,35 @@ namespace DeterministicChaos.Content.NPCs.Bosses
                 pos.Y += NPC.gfxOffY;
                 pos -= SpritePivotOffset * NPC.scale;
 
-                float drift = i * 0.45f;
-                pos.X += trailSpriteDir[i] * drift;
+                float trailRoti = trailRot[i];
+                float trailScale = NPC.scale;
+
+                if (enragedTrail)
+                {
+                    // Animalistic afterimage: jitter increases with trail age
+                    float jitterStrength = t * 14f;
+                    float seed = i * 73.7f + (float)Main.GameUpdateCount * 0.4f;
+                    pos.X += (float)System.Math.Sin(seed) * jitterStrength;
+                    pos.Y += (float)System.Math.Cos(seed * 1.3f) * jitterStrength;
+                    trailRoti += (float)System.Math.Sin(seed * 0.9f) * t * 0.3f;
+                    trailScale *= MathHelper.Lerp(1f, 0.85f + (float)System.Math.Sin(seed * 1.7f) * 0.15f, t);
+                    alpha *= 1.3f; // Slightly more visible
+                }
+                else
+                {
+                    float drift = i * 0.45f;
+                    pos.X += trailSpriteDir[i] * drift;
+                }
 
                 SpriteEffects fx = (trailSpriteDir[i] == 1) ? SpriteEffects.None : SpriteEffects.FlipHorizontally;
 
-                spriteBatch.Draw(tex2, pos, NPC.frame, Color.White * alpha, trailRot[i], origin2, NPC.scale, fx, 0f);
+                spriteBatch.Draw(tex2, pos, NPC.frame, spriteColor * alpha, trailRoti, origin2, trailScale, fx, 0f);
             }
 
+            // Draw main sprite at NPC.Center (interpolated by engine for smooth rendering).
             SpriteEffects mainFx2 = (NPC.spriteDirection == 1) ? SpriteEffects.None : SpriteEffects.FlipHorizontally;
 
-            spriteBatch.Draw(tex2, basePos2, NPC.frame, Color.White, NPC.rotation, origin2, NPC.scale, mainFx2, 0f);
+            spriteBatch.Draw(tex2, basePos2, NPC.frame, spriteColor, NPC.rotation, origin2, NPC.scale, mainFx2, 0f);
 
             return false;
         }
@@ -1994,6 +2528,12 @@ namespace DeterministicChaos.Content.NPCs.Bosses
             SetFrame(ColAttack2_Slash, SlashAnimStartRow + frame);
         }
 
+        public override bool CheckActive()
+        {
+            // Allow despawn only when all players are dead
+            return allPlayersDead;
+        }
+
         public override bool CanHitPlayer(Player target, ref int cooldownSlot)
         {
             // Can't hit player during major attack (sphere does damage instead)
@@ -2005,13 +2545,16 @@ namespace DeterministicChaos.Content.NPCs.Bosses
 
         public override bool? CanBeHitByItem(Player player, Item item)
         {
-            // Always allow hits, damage is transferred from sphere during ball/major phases
+            if (!BossArenaSystem.IsPlayerLockedIn(player.whoAmI))
+                return false;
             return null;
         }
 
         public override bool? CanBeHitByProjectile(Projectile projectile)
         {
-            // Always allow hits, damage is transferred from sphere during ball/major phases
+            if (projectile.owner >= 0 && projectile.owner < Main.maxPlayers
+                && !BossArenaSystem.IsPlayerLockedIn(projectile.owner))
+                return false;
             return null;
         }
     }

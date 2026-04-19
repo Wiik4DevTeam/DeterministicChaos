@@ -5,6 +5,7 @@ using Terraria.ModLoader;
 using Microsoft.Xna.Framework;
 using DeterministicChaos.Content.Subworlds;
 using DeterministicChaos.Content.Items;
+using DeterministicChaos.Content.Systems;
 
 namespace DeterministicChaos.Content.Subworlds
 {
@@ -76,11 +77,35 @@ namespace DeterministicChaos.Content.Subworlds
                         Player.creativeGodMode = savedGodMode;
                     }
                     
-                    // Give ShadowMantle if ERAM was defeated and player survived
+                    // Give ShadowMantle and SoulCatalyst if ERAM was defeated and player survived
                     if (defeatedERAM)
                     {
                         int shadowMantleType = ModContent.ItemType<ShadowMantle>();
                         Player.QuickSpawnItem(Player.GetSource_GiftOrReward(), shadowMantleType);
+
+                        int soulCatalystType = ModContent.ItemType<SoulCatalyst>();
+                        Player.QuickSpawnItem(Player.GetSource_GiftOrReward(), soulCatalystType);
+
+                        int shadowDiamondId = CalamityBossLootHelper.ResolveCalamityItemId("ShadowDiamond");
+                        int laudanumId = CalamityBossLootHelper.ResolveCalamityItemId("Laudanum");
+                        int heartOfDarknessId = CalamityBossLootHelper.ResolveCalamityItemId("HeartOfDarkness", "HeartofDarkness");
+                        int stressPillsId = CalamityBossLootHelper.ResolveCalamityItemId("StressPills");
+
+                        if (shadowDiamondId > 0)
+                            Player.QuickSpawnItem(Player.GetSource_GiftOrReward(), shadowDiamondId);
+
+                        if (CalamityBossLootHelper.IsRevengeanceOrDeathActive())
+                        {
+                            if (laudanumId > 0 && Main.rand.Next(60) == 0)
+                                Player.QuickSpawnItem(Player.GetSource_GiftOrReward(), laudanumId);
+
+                            if (heartOfDarknessId > 0 && Main.rand.Next(60) == 0)
+                                Player.QuickSpawnItem(Player.GetSource_GiftOrReward(), heartOfDarknessId);
+
+                            if (stressPillsId > 0 && Main.rand.Next(60) == 0)
+                                Player.QuickSpawnItem(Player.GetSource_GiftOrReward(), stressPillsId);
+                        }
+
                         defeatedERAM = false;
                     }
                     
@@ -338,6 +363,7 @@ namespace DeterministicChaos.Content.Subworlds
         {
             if (SubworldSystem.IsActive<ERAMArena>())
             {
+                ERAMProgressSystem.IsTransitioningSubworld = true;
                 SubworldSystem.Exit();
             }
         }

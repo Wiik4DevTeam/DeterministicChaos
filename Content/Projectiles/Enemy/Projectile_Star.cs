@@ -50,19 +50,25 @@ namespace DeterministicChaos.Content.Projectiles.Enemy
 
         public override void OnSpawn(Terraria.DataStructures.IEntitySource source)
         {
-            // Play star emit sound with random pitch
-            if (Main.netMode != NetmodeID.Server)
-            {
-                SoundEngine.PlaySound(new SoundStyle("DeterministicChaos/Assets/Sounds/KnightStarEmit")
-                {
-                    Volume = 0.8f,
-                    PitchVariance = 0.3f
-                }, Projectile.Center);
-            }
         }
+
+        private bool hasPlayedSpawnSound = false;
 
         public override void AI()
         {
+            // Play sound on first AI tick (runs on all clients, unlike OnSpawn)
+            if (!hasPlayedSpawnSound)
+            {
+                hasPlayedSpawnSound = true;
+                if (Main.netMode != NetmodeID.Server)
+                {
+                    SoundEngine.PlaySound(new SoundStyle("DeterministicChaos/Assets/Sounds/KnightStarEmit")
+                    {
+                        Volume = 0.8f,
+                        PitchVariance = 0.3f
+                    }, Projectile.Center);
+                }
+            }
             // ai[0] = sphere NPC index (if in absorb mode) OR explosion timer
             // ai[1] = behavior mode (-1 = absorb mode, 0 = normal, 2 = explode)
             // ai[2] = fuse time for explosion
@@ -70,9 +76,12 @@ namespace DeterministicChaos.Content.Projectiles.Enemy
             // Don't rotate the star
             // Projectile.rotation += 0.08f;  // Removed rotation
             
-            // Absorb mode: despawn when near sphere
+            // Absorb mode: non-hostile (visual only), despawn when near target
             if (Projectile.ai[1] == -1f)
             {
+                Projectile.hostile = false;
+                Projectile.penetrate = -1;
+
                 int sphereIdx = (int)Projectile.ai[0];
                 if (sphereIdx >= 0 && sphereIdx < Main.maxNPCs && Main.npc[sphereIdx].active)
                 {
@@ -151,7 +160,7 @@ namespace DeterministicChaos.Content.Projectiles.Enemy
                     if (Main.netMode != NetmodeID.MultiplayerClient)
                     {
                         int seekerType = ModContent.ProjectileType<Projectile_Seeking>();
-                        int count = 3;
+                        int count = 2;
 
                         for (int i = 0; i < count; i++)
                         {

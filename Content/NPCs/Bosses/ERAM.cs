@@ -10,6 +10,7 @@ using Terraria.ModLoader;
 using DeterministicChaos.Content.Subworlds;
 using DeterministicChaos.Content.Projectiles.Enemy;
 using DeterministicChaos.Content.Systems;
+using DeterministicChaos.Content.Items;
 
 namespace DeterministicChaos.Content.NPCs.Bosses
 {
@@ -722,6 +723,7 @@ namespace DeterministicChaos.Content.NPCs.Bosses
                     // Dialogue finished, now exit subworld
                     if (SubworldSystem.IsActive<ERAMArena>())
                     {
+                        ERAMProgressSystem.IsTransitioningSubworld = true;
                         SubworldSystem.Exit();
                     }
                     
@@ -738,6 +740,7 @@ namespace DeterministicChaos.Content.NPCs.Bosses
                 {
                     if (SubworldSystem.IsActive<ERAMArena>())
                     {
+                        ERAMProgressSystem.IsTransitioningSubworld = true;
                         SubworldSystem.Exit();
                     }
                     NPC.active = false;
@@ -827,8 +830,10 @@ namespace DeterministicChaos.Content.NPCs.Bosses
 
         public override void ModifyNPCLoot(NPCLoot npcLoot)
         {
-            // TODO: Add actual loot drops
-            // Example: npcLoot.Add(ItemDropRule.Common(ModContent.ItemType<Items.YourItem>()));
+            // ERAM never actually dies (CheckDead returns false), so these won't drop from the loot table.
+            // They are given after leaving the subworld instead. Registered here for Boss Checklist visibility.
+            npcLoot.Add(ItemDropRule.Common(ModContent.ItemType<ShadowMantle>()));
+            npcLoot.Add(ItemDropRule.Common(ModContent.ItemType<SoulCatalyst>()));
         }
 
         public override void BossLoot(ref string name, ref int potionType)

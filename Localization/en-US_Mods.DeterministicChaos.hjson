@@ -1,12 +1,25 @@
 NPCs: {
+	TitanBody.DisplayName: Titan
+	TitanHand.DisplayName: Titan
+	TitanFinger.DisplayName: Titan
+	TitanStar.DisplayName: Titan
+	TitanEye.DisplayName: Titan
+	TitanPupil.DisplayName: Titan
+	TitanBlob.DisplayName: Titan
+	TitanSpawn.DisplayName: Titan
+	TitanWormHead.DisplayName: Titan
+	TitanWormBody.DisplayName: Titan
+	TitanWormTail.DisplayName: Titan
+	TitanWing.DisplayName: Titan
 	RoaringKnight.DisplayName: Roaring Knight
 	RoaringKnightSphere.DisplayName: Roaring Knight Sphere
 	FakeEyeOfCthulhu.DisplayName: Fake Eye Of Cthulhu
 	RoaringKnightCutscene.DisplayName: Roaring Knight Cutscene
-	ERAM.DisplayName: E R A M
+	ERAM.DisplayName: E.R.A.M
 	PixelFriend.DisplayName: Pixel Friend
 	DarkWorldEye.DisplayName: Dark World Eye
 	DarkWorldSlime.DisplayName: Dark World Slime
+	Jevil.DisplayName: Jevil
 
 	Gerson: {
 		DisplayName: Gerson
@@ -28,6 +41,11 @@ NPCs: {
 			Princess_LovesNPC: I like {NPCName}.
 		}
 	}
+
+	MetalSlime.DisplayName: Metal Slime
+	HauntedHelmet.DisplayName: Haunted Helmet
+	DarkEye.DisplayName: Dark Eye
+	ArmoredZombie.DisplayName: Armored Zombie
 }
 
 Bestiary.Gerson: An ancient tortoise who has already completed his journey. He offers guidance to those seeking to understand their inner nature.
@@ -46,7 +64,11 @@ Dialogue: {
 		ChooseTrait: Soul Traits
 		ViewTrait: View Trait
 		TraitInfo: Your soul radiates with {0}. This path is now permanent.
+		Traits: Traits
 		Help: Help
+		Dialogue: Dialogue
+		SelectTrait: Select Trait
+		Back: Back
 		Next: Next
 		Close: Close
 		HelpPreSkeletron1: I'm too old to be fightin' along side ya, but I've got a few things that could help!
@@ -119,17 +141,22 @@ Buffs: {
 
 	IntegrityMarkBuff: {
 		DisplayName: Integrity Mark
-		Description: Your next critical strike deals bonus damage. Stacks up to 3 times.
+		Description: Your next hit adds Defense to armor penetration.
+	}
+
+	IntegrityDamageBuff: {
+		DisplayName: Integrity Stacks
+		Description: +5% damage per stack after taking damage.
 	}
 
 	PerseveranceMarkBuff: {
 		DisplayName: Perseverance Mark
-		Description: Your next hit adds Defense to armor penetration.
+		Description: The next hit deals 50% less damage but depletes all mana.
 	}
 
 	PerseveranceDamageBuff: {
 		DisplayName: Perseverance Stacks
-		Description: +5% damage per stack after taking damage.
+		Description: No longer in use.
 	}
 
 	DeterminationMarkBuff: {
@@ -160,6 +187,46 @@ Buffs: {
 	HollowGunTagDebuff: {
 		DisplayName: Justice Tag
 		Description: Marked for summon damage.
+	}
+
+	VirtueBuff: {
+		DisplayName: Virtue
+		Description: +15% weapon damage, attack speed, and critical strike chance.
+	}
+
+	RoaringLensBuff: {
+		Description: Mods.DeterministicChaos.Buffs.RoaringLensBuff.Description
+		DisplayName: Roaring Lens Buff
+	}
+
+	TitanStarBuff: {
+		DisplayName: Titan Star
+		Description: A radiant star lights your path.
+	}
+
+	StagnationSicknessBuff: {
+		DisplayName: Stagnation Sickness
+		Description: Your body glitches out, increasing damage taken by 25%
+	}
+
+	TitansBane: {
+		DisplayName: Titansbane
+		Description: Slowly losing health proportional to current HP.
+	}
+
+	TitansBaneImbue: {
+		DisplayName: Flask of Titansbane
+		Description: Melee attacks inflict Titansbane on enemies.
+	}
+
+	LeylineTagBuff: {
+		DisplayName: Leyline Tag Buff
+		Description: Mods.DeterministicChaos.Buffs.LeylineTagBuff.Description
+	}
+
+	AppendageBuff: {
+		DisplayName: Appendage
+		Description: The Titan's hands fight for you.
 	}
 }
 
@@ -204,13 +271,73 @@ Projectiles: {
 	RogueSlashAttack.DisplayName: Rogue Slash Attack
 	BaseballBatSwing.DisplayName: Baseball Bat Swing
 	RustyKnifeSwing.DisplayName: Rusty Knife
+	RealKnifeSwing.DisplayName: Real Knife
 	DeterminationSlash.DisplayName: Determination Slash
 	FryingPanSwing.DisplayName: Frying Pan
 	EggProjectile.DisplayName: Egg
 	KindnessPickup.DisplayName: Kindness
 	JusticeBeam.DisplayName: Justice Beam
 	TornNotebookLetter.DisplayName: Letter
+	AbstractLetter.DisplayName: Letter
 	BalletShoesProjectile.DisplayName: Ballet Dash
+	AerodynamicBootsProjectile.DisplayName: Aerodynamic Dash
+	SpeedLine.DisplayName: Speed Line
+	CookingPotCone.DisplayName: Cooking Pot Blast
+	CookingPotSwing.DisplayName: Cooking Pot
+	ToyKnifeProjectile.DisplayName: Toy Knife
+	ToyerKnifeProjectile.DisplayName: Toyer Knife
+	ToughGloveProjectile.DisplayName: Tough Punch
+	ToughGauntletProjectile.DisplayName: Tough Gauntlet
+	TitanMultiplierOrb.DisplayName: Titan Multiplier Orb
+	TitanLaserBeam.DisplayName: Titan Laser Beam
+	TitanLaserIndicator.DisplayName: Titan Laser Indicator
+	TitanFingerProjectile.DisplayName: Titan Finger Projectile
+	DarkEyeLaser.DisplayName: Dark Eye Laser
+	TitanBallAttack.DisplayName: Titan Ball Attack
+	TitanBallWhite.DisplayName: Titan Ball White
+	StarShardParticle.DisplayName: Star Shard Particle
+	SpadeProjectile.DisplayName: Spade
+	HeartProjectile.DisplayName: Heart
+	ClubProjectile.DisplayName: Club
+	DiamondProjectile.DisplayName: Diamond
+	ClubBomb.DisplayName: Club Bomb
+	HeartBomb.DisplayName: Heart Bomb
+	SpadeBomb.DisplayName: Spade Bomb
+	DiamondBomb.DisplayName: Diamond Bomb
+	HorseProjectile.DisplayName: Horse
+	ScytheProjectileTracking.DisplayName: Scythe
+	ScytheProjectileFalling.DisplayName: Scythe
+	GiantScytheProjectile.DisplayName: Giant Scythe Projectile
+	DevilsknifeProjectile.DisplayName: Devilsknife Projectile
+	FriendlyClubProjectile.DisplayName: Friendly Club Projectile
+	FriendlyDiamondProjectile.DisplayName: Friendly Diamond Projectile
+	FriendlyHeartProjectile.DisplayName: Friendly Heart Projectile
+	FriendlySpadeProjectile.DisplayName: Friendly Spade Projectile
+	AceOfSpadesBullet.DisplayName: Ace Of Spades Bullet
+	QueenOfDiamondsProjectile.DisplayName: Queen Of Diamonds Projectile
+	KingOfHeartsHeart.DisplayName: King Of Hearts Heart
+	KingOfHeartsProjectile.DisplayName: King Of Hearts Projectile
+	JackOfClubsProjectile.DisplayName: Jack Of Clubs Projectile
+	KnightEye.DisplayName: Knight Eye
+	KnightSphere.DisplayName: Knight Sphere
+	TitanFinalLaserBolt.DisplayName: Titan Final Laser Bolt
+	ForthcomingWrathProjectile.DisplayName: Forthcoming Wrath
+	LodestoneForkSpam.DisplayName: Lodestone Chunk
+	LodestoneForkStealth.DisplayName: Lodestone Magnetizer
+	CascadeProjectile.DisplayName: Cascade Bolt
+	TitansArrowProjectile.DisplayName: Titan's Arrow
+	BoltExplosion.DisplayName: Bolt Explosion
+	ShatteredGlassBeamArc.DisplayName: Shattered Glass Beam Arc
+	ShatteredGlassProjectile.DisplayName: Shattered Glass Projectile
+	ShatteredGlassShard.DisplayName: Shattered Glass Shard
+	DefaultBeam.DisplayName: Default Beam
+	LeylineProjectile.DisplayName: Leyline Projectile
+	AppendageHandProjectile.DisplayName: Titan Hand
+	AppendageLaser.DisplayName: Titan Laser
+	TitanStarProjectile.DisplayName: Titan Star Projectile
+	ClubEarthquakeProjectile.DisplayName: Club Earthquake Projectile
+	ClubEarthquakeHitbox.DisplayName: Club Earthquake Hitbox
+	SteadfastV1DashProjectile.DisplayName: Steadfast Dash
 }
 
 Items: {
@@ -244,6 +371,25 @@ Items: {
 		Tooltip: This eye looks a bit more suspicious than usual.
 	}
 
+	DevilsKey: {
+		DisplayName: Devil's Key
+		Tooltip:
+			'''
+			A key made from light and dark.
+			Summons Jevil.
+			'''
+	}
+
+	RodOfStagnation: {
+		DisplayName: Rod of Stagnation
+		Tooltip:
+			'''
+			Teleports you to the cursor
+			Applies Stagnation Sickness for 6 seconds
+			While sickened: +25% damage taken
+			'''
+	}
+
 	ShadowMantle: {
 		DisplayName: Shadow Mantle
 		Tooltip:
@@ -263,9 +409,22 @@ Items: {
 		DisplayName: Cloudy Glasses
 		Tooltip:
 			'''
-			Requires PERSEVERANCE soul trait.
-			+3 Perseverance investment points.
-			Increases invulnerability frames by 0.3 seconds when hit.
+			[c/FF00FF:Requires PERSEVERANCE soul trait.]
+			[c/FF00FF:+3 Perseverance investment points.]
+			[c/FF00FF:Increases invulnerability frames by 0.3 seconds when hit.]
+			'''
+	}
+
+	PrismaticGlasses: {
+		DisplayName: Prismatic Glasses
+		Tooltip:
+			'''
+			[c/FF00FF:Requires PERSEVERANCE soul trait.]
+			[c/FF00FF:+6 Perseverance investment points.]
+			[c/FF00FF:Increases invulnerability frames by 0.3 seconds when hit.]
+			[c/FF00FF:Taking damage grants +20 temporary max mana (up to +100) for 5 seconds.]
+			Restores mana when damaged
+			Increases pickup range for mana stars
 			'''
 	}
 
@@ -273,12 +432,12 @@ Items: {
 		DisplayName: Torn Notebook
 		Tooltip:
 			'''
-			Words have power.
-			Requires PERSEVERANCE soul trait.
-			+3 Perseverance investment points.
-			Fires letters stored in your book. Each letter costs 20 mana.
-			While in Rogue Stealth: Letters cost half mana.
-			Right-click to write in the book. Certain words have special effects.
+			[c/FF00FF:Words have power.]
+			[c/FF00FF:Requires PERSEVERANCE soul trait.]
+			[c/FF00FF:+3 Perseverance investment points.]
+			[c/FF00FF:Fires letters stored in your book. Each letter costs 20 mana.]
+			[c/FF00FF:While in Rogue Stealth: Letters cost half mana.]
+			[c/FF00FF:Right-click to write in the book. Certain words have special effects.]
 			'''
 	}
 
@@ -286,9 +445,23 @@ Items: {
 		DisplayName: Cowboy Hat
 		Tooltip:
 			'''
-			Requires JUSTICE soul trait.
-			+3 Justice investment points.
-			Critical hits increase global attack speed by 50% for 0.2 seconds.
+			[c/FFFF00:Requires JUSTICE soul trait.]
+			[c/FFFF00:+3 Justice investment points.]
+			[c/FFFF00:Critical hits increase global attack speed by 10% for 0.2 seconds.]
+			'''
+	}
+
+	SheriffHat: {
+		DisplayName: Sheriff Hat
+		Tooltip:
+			'''
+			[c/FFFF00:Requires JUSTICE soul trait.]
+			[c/FFFF00:+6 Justice investment points.]
+			[c/FFFF00:Critical hits increase global attack speed by 10% for 0.2 seconds.]
+			[c/FFFF00:Hypercritical Hits grant an additional 20% attack speed for 0.6 seconds!]
+			Allows the holder to triple jump
+			Increases jump height
+			Negates fall damage
 			'''
 	}
 
@@ -296,9 +469,9 @@ Items: {
 		DisplayName: Faded Ribbon
 		Tooltip:
 			'''
-			Requires PATIENCE soul trait.
-			+3 Patience investment points.
-			While at max health, take 30% decreased damage.
+			[c/00FFFF:Requires PATIENCE soul trait.]
+			[c/00FFFF:+3 Patience investment points.]
+			[c/00FFFF:While at max health, take 30% decreased damage.]
 			'''
 	}
 
@@ -306,9 +479,21 @@ Items: {
 		DisplayName: Heart Locket
 		Tooltip:
 			'''
-			Requires DETERMINATION soul trait.
-			+3 Determination investment points.
-			Gain increasing bonuses to all stats as your health gets lower.
+			[c/FF0000:Requires DETERMINATION soul trait.]
+			[c/FF0000:+3 Determination investment points.]
+			[c/FF0000:Gain increasing bonuses to all stats as your health gets lower.]
+			'''
+	}
+
+	TrueHeartLocket: {
+		DisplayName: True Heart Locket
+		Tooltip:
+			'''
+			[c/FF0000:Requires DETERMINATION soul trait.]
+			[c/FF0000:+6 Determination investment points.]
+			[c/FF0000:Gain greatly increased bonuses to all stats as your health gets lower.]
+			[c/FF0000:Up to +25% damage, +25% attack speed, +15 defense, +15% movement speed.]
+			Increases length of invincibility after taking damage
 			'''
 	}
 
@@ -316,9 +501,22 @@ Items: {
 		DisplayName: Manly Bandana
 		Tooltip:
 			'''
-			Requires BRAVERY soul trait.
-			+3 Bravery investment points.
-			Gain increased damage based on your current velocity, up to 10%.
+			[c/FFA500:Requires BRAVERY soul trait.]
+			[c/FFA500:+3 Bravery investment points.]
+			[c/FFA500:Gain increased damage based on your current velocity, up to 10%.]
+			'''
+	}
+
+	BurningBandana: {
+		DisplayName: Burning Bandana
+		Tooltip:
+			'''
+			[c/FFA500:Requires BRAVERY soul trait.]
+			[c/FFA500:+6 Bravery investment points.]
+			[c/FFA500:Gain increased damage based on your current velocity, up to 20%.]
+			Provides the ability to run super fast
+			Provides the ability to walk on water and lava
+			Provides immunity to fire blocks and 7 seconds of lava immunity
 			'''
 	}
 
@@ -326,9 +524,21 @@ Items: {
 		DisplayName: Old TuTu
 		Tooltip:
 			'''
-			Requires INTEGRITY soul trait.
-			+3 Integrity investment points.
-			Press the DASH key to perform an evasive maneuver that inverts your velocity at half speed.
+			[c/1E90FF:Requires INTEGRITY soul trait.]
+			[c/1E90FF:+3 Integrity investment points.]
+			[c/1E90FF:Press the DASH key to perform an evasive maneuver that inverts your velocity at half speed.]
+			'''
+	}
+
+	SturdySkirt: {
+		DisplayName: Sturdy Skirt
+		Tooltip:
+			'''
+			[c/1E90FF:Requires INTEGRITY soul trait.]
+			[c/1E90FF:+6 Integrity investment points.]
+			[c/1E90FF:Press the DASH key to perform an evasive maneuver that inverts your velocity at half speed.]
+			[c/1E90FF:Damage taken is converted into tick poison damage over 2 seconds.]
+			+6 defense
 			'''
 	}
 
@@ -336,9 +546,33 @@ Items: {
 		DisplayName: Stained Apron
 		Tooltip:
 			'''
-			Requires KINDNESS soul trait.
-			+3 Kindness investment points.
-			All healing done to nearby teammates and town NPCs is applied to you as well.
+			[c/32CD32:Requires KINDNESS soul trait.]
+			[c/32CD32:+3 Kindness investment points.]
+			[c/32CD32:All healing done to nearby teammates and town NPCs is applied to you as well.]
+			'''
+	}
+
+	CaringApron: {
+		DisplayName: Caring Apron
+		Tooltip:
+			'''
+			[c/32CD32:Requires KINDNESS soul trait.]
+			[c/32CD32:+6 Kindness investment points.]
+			[c/32CD32:All healing done to nearby teammates and town NPCs is applied to you as well.]
+			[c/32CD32:Mirrored healing reduces potion sickness by 1/4th the heal in seconds (max 1s).]
+			Enemies are less likely to target you
+			5% increased damage
+			'''
+	}
+
+	CuteBow: {
+		DisplayName: Cute Bow
+		Tooltip:
+			'''
+			[c/00FFFF:Requires PATIENCE soul trait.]
+			[c/00FFFF:+6 Patience investment points.]
+			[c/00FFFF:While at max health, take 50% decreased damage.]
+			[c/00FFFF:Significantly increased life regeneration when near full health.]
 			'''
 	}
 
@@ -357,12 +591,72 @@ Items: {
 			'''
 	}
 
+	KnightTrophy: {
+		DisplayName: Roaring Knight Trophy
+		Tooltip: ""
+	}
+
+	KnightRelic: {
+		DisplayName: Roaring Knight Relic
+		Tooltip: ""
+	}
+
+	JevilTrophy: {
+		DisplayName: Jevil Trophy
+		Tooltip: ""
+	}
+
+	JevilRelic: {
+		DisplayName: Jevil Relic
+		Tooltip: ""
+	}
+
+	TitanTrophy: {
+		DisplayName: Titan Trophy
+		Tooltip: ""
+	}
+
+	TitanRelic: {
+		DisplayName: Titan Relic
+		Tooltip: ""
+	}
+
 	RoaringYoyo: {
 		DisplayName: Static
 		Tooltip:
 			'''
 			A childish form for a volatile substance.
 			Emits Star projectiles in a rotating pattern around the yoyo.
+			'''
+	}
+
+	RoaringRing: {
+		DisplayName: Roaring Ring
+		Tooltip:
+			'''
+			A ring bearing the knight's dark energy.
+			Leaves afterimages of movement in your wake.
+			Works even in the vanity slot.
+			'''
+	}
+
+	RoaringShield: {
+		DisplayName: Roaring Shield
+		Tooltip:
+			'''
+			A shield forged from the knight's splintered remains.
+			Dash to transform into a rolling sphere and dash a far distance.
+			Deals contact damage during the dash, but does not grant immunity.
+			'''
+	}
+
+	RoaringLens: {
+		DisplayName: Roaring Lens
+		Tooltip:
+			'''
+			A fractured lens containing the knight's watchful eye.
+			Summons a sphere and eye that illuminate your surroundings.
+			The eye tracks nearby enemies and shines a beam at the closest one.
 			'''
 	}
 
@@ -535,12 +829,12 @@ Items: {
 		DisplayName: Rusty Knife
 		Tooltip:
 			'''
-			A worn blade that resonates with DETERMINATION.
-			+3 Determination Investment
-			Melee attacks restore 20 Mana.
-			Right click to consume 200 mana and begin a Timed Attack.
-			Time the marker to the center for up to 3x damage on the ranged slash.
-			Requires the DETERMINATION Trait to use the Timed Attack.
+			[c/FF0000:A worn blade that resonates with DETERMINATION.]
+			[c/FF0000:Requires the DETERMINATION Trait to use.]
+			[c/FF0000:+3 Determination Investment]
+			[c/FF0000:Melee attacks restore 20 Mana.]
+			[c/FF0000:Right click to consume 200 mana and begin a Timed Attack.]
+			[c/FF0000:Time the marker to the center for up to 10x damage on the ranged slash.]
 			'''
 	}
 
@@ -548,10 +842,26 @@ Items: {
 		DisplayName: Frying Pan
 		Tooltip:
 			'''
-			A well-seasoned pan that resonates with KINDNESS.
-			+3 Kindness Investment
-			Converts ammo into eggs that spawn healing pickups on hit.
-			Requires the KINDNESS Trait to launch eggs.
+			[c/32CD32:A well-seasoned pan that resonates with KINDNESS.]
+			[c/32CD32:Requires the KINDNESS Trait to use.]
+			[c/32CD32:+3 Kindness Investment]
+			[c/32CD32:Converts ammo into eggs that spawn healing pickups on hit.]
+			'''
+	}
+
+	CookingPot: {
+		DisplayName: Cooking Pot
+		Tooltip:
+			'''
+			[c/32CD32:"A charmed pot brimming with KINDNESS."]
+			[c/32CD32:Requires the KINDNESS Trait to use.]
+			[c/32CD32:+6 Kindness Investment]
+			[c/32CD32:Fires a cone of green energy. Each enemy can only be hit once per blast.]
+			[c/32CD32:Enemies hit spawn healing pickups.]
+			[c/32CD32:While selecting a compatable item, right click the Cooking Pot to add it to the pot:]
+			[c/32CD32: - Flask: Applies its debuff to enemies hit.]
+			[c/32CD32: - Food: Heals allies caught in the cone.]
+			[c/32CD32: - Alcohol: Buffs allies hit for 1 second.]
 			'''
 	}
 
@@ -559,11 +869,11 @@ Items: {
 		DisplayName: Hollow Gun
 		Tooltip:
 			'''
-			+3 Justice Investment
-			An empty gun. Yours to make purpose to.
-			When using any Double Jump, marks the highest health enemy nearby.
-			Your next shot fires an auto-homing Justice beam that critically hits. Your summons will focus struck enemies.
-			Requires the JUSTICE Trait to use.
+			[c/FFFF00:An empty gun. Yours to fill with purpose.]
+			[c/FFFF00:Requires the JUSTICE Trait to use.]
+			[c/FFFF00:+3 Justice Investment]
+			[c/FFFF00:When using any Double Jump, marks the highest health enemy nearby.]
+			[c/FFFF00:Your next shot fires an auto-homing Justice beam that critically hits. Your summons will focus struck enemies.]
 			'''
 	}
 
@@ -571,16 +881,415 @@ Items: {
 		DisplayName: Ballet Shoes
 		Tooltip:
 			'''
-			Dance through the battlefield with grace.
-			Requires INTEGRITY soul trait.
-			+3 Integrity investment points.
-			Launch yourself toward your cursor.
-			Brief parry window (0.15s) on use - any damage is completely negated.
-			Hitting enemies focuses your summons on them.
-			Parrying or hitting enemies grants a Grace Stack (max 3).
-			Grace Stacks are consumed when taking damage to halve it.
-			+15% damage per stack, +25% crit damage at 2+ stacks.
+			[c/1E90FF:Dance through the battlefield with grace.]
+			[c/1E90FF:Requires INTEGRITY soul trait.]
+			[c/1E90FF:+3 Integrity investment points.]
+			[c/1E90FF:Launch yourself toward your cursor.]
+			[c/1E90FF:Hitting enemies focuses your summons on them.]
+			[c/1E90FF:Parrying or hitting enemies grants a Grace Stack which increases damage (max 3).]
+			[c/1E90FF:Grace Stacks are consumed when taking damage to halve it.]
 			'''
+	}
+
+	AerodynamicBoots: {
+		DisplayName: Aerodynamic Boots
+		Tooltip:
+			'''
+			[c/1E90FF:"There is strength in simplicity."]
+			[c/1E90FF:Requires INTEGRITY soul trait.]
+			[c/1E90FF:+6 Integrity investment points.]
+			[c/1E90FF:Launch yourself toward your cursor.]
+			[c/1E90FF:Hitting enemies focuses your summons on them.]
+			[c/1E90FF:Parrying or hitting grants a Grace Stack (max 5).]
+			[c/1E90FF:More stacks increase air maneuverability and dash damage.]
+			[c/1E90FF:Grace Stacks are consumed when taking damage to halve it.]
+			'''
+	}
+
+	SteadfastV1: {
+		DisplayName: Steadfast V1
+		Tooltip:
+			'''
+			[c/1E90FF:"Prototype boots that allow for free movement."]
+			[c/1E90FF:Requires INTEGRITY soul trait.]
+			[c/1E90FF:+8 Integrity investment points.]
+			[c/1E90FF:While held, gain 25% passive damage reduction.]
+			[c/1E90FF:Dash toward your cursor. Up to 5 air dashes before landing.]
+			[c/1E90FF:Hitting an enemy resets your air dash counter.]
+			[c/1E90FF:Dashing into enemy projectiles parries and reflects them.]
+			[c/1E90FF:Dashing into enemies parries them and grants brief invulnerability.]
+			'''
+	}
+
+	ToyKnife: {
+		DisplayName: Toy Knife
+		Tooltip:
+			'''
+			[c/00FFFF:A dull plastic blade. Not very threatening.]
+			[c/00FFFF:Requires PATIENCE trait to use.]
+			[c/00FFFF:+3 Patience investment points.]
+			[c/00FFFF:Hits grant 20 mana.]
+			[c/00FFFF:Hitting while at full mana grants temporary bonus capacity to stealth and mana.]
+			'''
+	}
+
+	ToyerKnife: {
+		DisplayName: Toyer Knife
+		Tooltip:
+			'''
+			[c/00FFFF:"Be patient. You'll get a real weapon soon enough".]
+			[c/00FFFF:Requires PATIENCE trait to use.]
+			[c/00FFFF:+6 Patience investment points.]
+			[c/00FFFF:Hits grant 20 mana.]
+			[c/00FFFF:Hitting while at full mana grants temporary bonus capacity to stealth and mana.]
+			[c/00FFFF:While held, grants "Virtue".]
+			[c/00FFFF:Virtue builds up to 10 seconds and drains when you swap weapons.]
+			'''
+	}
+
+	ToughGlove: {
+		DisplayName: Tough Glove
+		Tooltip:
+			'''
+			[c/FFA500:A worn boxing glove. Still packs a punch!]
+			[c/FFA500:Requires BRAVERY trait to use.]
+			[c/FFA500:+3 Bravery investment points.]
+			[c/FFA500:Fires flaming fist projectiles. Better movement capabilities while equipped.]
+			[c/FFA500:Use Fire and Alt Fire to create combos.]
+			[c/FFA500:Small gloves apply Fire. Large gloves explode burning targets.]
+			'''
+	}
+
+	ToughGauntlet: {
+		DisplayName: Tough Gauntlet
+		Tooltip:
+			'''
+			[c/FFA500:A brutal gauntlet forged in BRAVERY.]
+			[c/FFA500:Requires BRAVERY trait to use.]
+			[c/FFA500:+6 Bravery investment points.]
+			[c/FFA500:Fires flaming fist projectiles. Faster combos and movement while equipped.]
+			[c/FFA500:Use Fire and Alt Fire to create combos.]
+			[c/FFA500:Small fists inflict Hellfire. Large fists detonate Hellfire in massive explosions.]
+			'''
+	}
+
+	MetalSlimeBanner: {
+		Tooltip: ""
+		DisplayName: Metal Slime Banner
+	}
+
+	DarkEyeBanner: {
+		Tooltip: ""
+		DisplayName: Dark Eye Banner
+	}
+
+	ArmoredZombieBanner: {
+		Tooltip: ""
+		DisplayName: Armored Zombie Banner
+	}
+
+	SparkOfPerseverance: {
+		Tooltip: ""
+		DisplayName: Spark Of Perseverance
+	}
+
+	SparkOfPatience: {
+		Tooltip: ""
+		DisplayName: Spark Of Patience
+	}
+
+	SparkOfKindness: {
+		Tooltip: ""
+		DisplayName: Spark Of Kindness
+	}
+
+	SparkOfJustice: {
+		Tooltip: ""
+		DisplayName: Spark Of Justice
+	}
+
+	SparkOfIntegrity: {
+		Tooltip: ""
+		DisplayName: Spark Of Integrity
+	}
+
+	SparkOfDetermination: {
+		Tooltip: ""
+		DisplayName: Spark Of Determination
+	}
+
+	SparkOfBravery: {
+		Tooltip: ""
+		DisplayName: Spark Of Bravery
+	}
+
+	SoulCatalyst: {
+		DisplayName: Soul Catalyst
+		Tooltip: A blighted star with the power to manifest memories within long forgotten mementos.
+	}
+
+	JusticeDecree: {
+		DisplayName: Justice Decree
+		Tooltip:
+			'''
+			[c/FFFF00:A decree forged in righteous fire.]
+			[c/FFFF00:Requires the JUSTICE Trait to use.]
+			[c/FFFF00:+6 Justice Investment]
+			[c/FFFF00:When using any Double Jump, places up to 6 marks across nearby enemies.]
+			[c/FFFF00:Each shot fires at the next mark with an auto-homing Justice beam. Your summons will focus struck enemies.]
+			[c/FFFF00:All hits on targetted enemies are guaranteed critical strikes, and crit chance is converted into -Hypercrit- chance.]
+			[c/FFFF00:Hypercrits deal 4x damage instead of 2x.]
+			'''
+	}
+
+	RealKnife: {
+		DisplayName: Real Knife
+		Tooltip:
+			'''
+			[c/FF0000:A blade forged from DETERMINATION.]
+			[c/FF0000:Requires the DETERMINATION Trait to use.]
+			[c/FF0000:+6 Determination Investment]
+			[c/FF0000:Melee attacks restore 20 Mana.]
+			[c/FF0000:Right click to consume 200 mana and begin a Timed Attack.]
+			[c/FF0000:Time the marker to the center for up to 15x damage on the ranged slash.]
+			'''
+	}
+
+	SpecialistsNotebook: {
+		DisplayName: Specialist's Notebook
+		Tooltip:
+			'''
+			[c/FF00FF:Words have power, refined and focused.]
+			[c/FF00FF:Requires PERSEVERANCE soul trait.]
+			[c/FF00FF:+6 Perseverance investment points.]
+			[c/FF00FF:Fires letters stored in your book. Each letter costs 12 mana.]
+			[c/FF00FF:While in Rogue Stealth: Letters cost half mana.]
+			[c/FF00FF:Right-click to write in the book. Certain words have special effects.]
+			[c/FF00FF:New words: SPLIT, PARTITION, BURST, BURROW.]
+			'''
+	}
+
+	TheAbstract: {
+		DisplayName: The Abstract
+		Tooltip:
+			'''
+			[c/A050FF:Every worthwhile paper has an Abstract.]
+			[c/A050FF:Requires PERSEVERANCE soul trait.]
+			[c/A050FF:+8 Perseverance investment points.]
+			[c/A050FF:Fires letters stored in your book. Each letter costs 5 mana.]
+			[c/A050FF:While in Rogue Stealth: Letters cost half mana.]
+			[c/A050FF:Right-click to write in the book. Certain words have special effects.]
+			[c/A050FF:New words: HEAL, AURA, RAIN.]
+			'''
+	}
+
+	JevilBossBag: {
+		DisplayName: Jevil Boss Bag
+		Tooltip: ""
+	}
+
+	KnightBossBag: {
+		DisplayName: Knight Boss Bag
+		Tooltip: ""
+	}
+
+	TitanBossBag: {
+		DisplayName: Titan Boss Bag
+		Tooltip: ""
+	}
+
+	ForthcomingWrath: {
+		DisplayName: Forthcoming Wrath
+		Tooltip:
+			'''
+			A glaive that cleaves through the air in rapid succession.
+			Each strike fans out three blades in a sweeping cone.
+			Every 9 hits charges a Forthcoming Strike that inflicts Titansbane for 10 seconds.
+			'''
+	}
+
+	LodestoneFork: {
+		DisplayName: Lodestone Fork
+		Tooltip:
+			'''
+			Fires magnetic chunks that phase through tiles and pierce enemies.
+			Chunks last 5 seconds; each enemy hit has a 1-second pierce cooldown.
+			Stealth Strikes deploy a lodestone magnetizer
+			The magnetizer sticks to tiles, enemies, or friendly players.
+			Nearby chunks are pulled toward it in a crackling electromagnetic field.
+			'''
+	}
+
+	TitansBaneFlask: {
+		DisplayName: Flask of Titansbane
+		Tooltip:
+			'''
+			Infuses melee attacks with Titansbane.
+			Compatible with the Cooking Pot.
+			'''
+	}
+
+	Titansblood: {
+		DisplayName: Titansblood
+		Tooltip: "'The lifeblood of a Titan, still warm.'"
+	}
+
+	Devilsknife: {
+		DisplayName: Devilsknife
+		Tooltip:
+			'''
+			"I'm a Jack of all Trades!"
+			Throws a spinning scythe that returns to you.
+			Hits spawn a random suit projectile on enemies
+			Stealth strikes throw four arcing scythes
+			'''
+	}
+
+	Soulflicker: {
+		DisplayName: Soulflicker
+		Tooltip:
+			'''
+			"A faint ember of still lingers within."
+			Permanently increases soul investment by 3
+			'''
+	}
+
+	AceOfSpades: {
+		DisplayName: Ace of Spades
+		Tooltip:
+			'''
+			"Is it a 1, or an 11?"
+			Converts Musket Balls into piercing Spade projectiles
+			Spades can pierce up to three enemies
+			'''
+	}
+
+	QueenOfDiamonds: {
+		DisplayName: Queen of Diamonds
+		Tooltip:
+			'''
+			"She'll beat you if she's able."
+			Whip hits command your minions to attack
+			Each minion fires a diamond at the struck target
+			Up to 5 diamonds per hit
+			'''
+	}
+
+	KingOfHearts: {
+		DisplayName: King of Hearts
+		Tooltip:
+			'''
+			"Off with their heads!"
+			Hold to summon orbiting hearts, up to 10
+			Hearts cost 25 mana each
+			Release to send the heart swarm toward the cursor
+			'''
+	}
+
+	DeckOfCards: {
+		DisplayName: Deck of Cards
+		Tooltip:
+			'''
+			+0.5 luck
+			+4% critical strike chance
+			Hitting enemies creates a card over your head
+			At 5 cards, unleash a suit attack based on your poker hand
+			The 'Luck' stat improves chances at better hands
+			Cards can only be gained once per second
+			'''
+	}
+
+	OopsAllCrits: {
+		DisplayName: Oops All Crits
+		Tooltip:
+			'''
+			+0.15 luck
+			+45% critical strike chance
+			-22% total damage
+			'''
+	}
+
+	JackOfClubs: {
+		DisplayName: Jack of Clubs
+		Tooltip:
+			'''
+			"Hit the road."
+			Slam the ground to create a shockwave of clubs
+			Direct hits launch enemies into the air
+			Its immense weight carries you along with it
+			'''
+	}
+
+	Cascade: {
+		DisplayName: Cascade
+		Tooltip:
+			'''
+			A crossbow of immense destructive power.
+			Converts all arrows into a high-velocity bolt that sticks to any surface or enemy.
+			The bolt pulls nearby enemies toward it, then detonates for massive damage.
+			While attached, it calls in 8 copies of the loaded arrows from afar.
+			Consumes 3 arrows per shot.
+			'''
+	}
+
+	ShatteredGlass: {
+		DisplayName: Shattered Glass
+		Tooltip:
+			'''
+			Fires a deep blue beam of fractured light.
+			Hits create glass shards around enemies for a short time.
+			Further hits ricochet between the shards for extra damage.
+			'''
+	}
+
+	Leyline: {
+		DisplayName: Leyline
+		Tooltip:
+			'''
+			A whip that behaves like a living grapple.
+			Hooks to enemies or the cursor and reels you in over time.
+			Enemies touching the tether take repeated damage.
+			Release while latched onto an enemy to deal up to 10x damage.
+			This release damage maxes out after 2 seconds attached.
+			'''
+	}
+
+	TitansArrow: {
+		DisplayName: Titan's Arrow
+		Tooltip:
+			'''
+			Sticks to the first target or surface it hits.
+			Deals 20% damage on impact, then explodes for the remaining 80% after 1 second.
+			'''
+	}
+
+	Appendage: {
+		DisplayName: Appendage
+		Tooltip:
+			'''
+			The Titan's grasp, now yours to command.
+			Summons two Titan hands that flank you.
+			The hands periodically fire devastating lasers at nearby enemies.
+			Whip-tagged targets are prioritized.
+			Takes up two minion slots. Only one pair may be summoned.
+			'''
+	}
+
+	TitanicEmblem: {
+		DisplayName: Titanic Emblem
+		Tooltip:
+			'''
+			The weight of a Titan behind every swing.
+			112% increased true melee weapon size.
+			10% increased true melee weapon damage.
+			66% increased true melee weapon knockback.
+			25% decreased true melee weapon attack speed.
+			'''
+	}
+
+	TitanStar: {
+		DisplayName: Titan Star
+		Tooltip: Summons a radiant star to light your way.
 	}
 }
 
@@ -629,19 +1338,19 @@ SoulTraits: {
 	Integrity: {
 		Name: INTEGRITY
 		Description: A soul that stays true to one's self.
-		Bonus3: Increased global critical strike damage by 15%. Decreased critical strike chance by 10%.
-		Bonus5: Increased global attack speed by 15%. Decreased attack damage by 10%.
+		Bonus3: +20% increased defense. -10% total damage dealt.
+		Bonus5: Taking damage increases your damage dealt by 5%. Lasts 5 seconds, stacks up to 5 times.
 		Bonus12: Removes all negative effects from previous investment bonuses.
-		Bonus20: After dealing damage, gain an Integrity Mark. Your next critical strike will deal increased damage.
+		Bonus20: After taking damage, gain an Integrity Mark. Your next hit will add your Defense as flat bonus damage.
 	}
 
 	Perseverance: {
 		Name: PERSEVERANCE
 		Description: A soul that endures through hardship.
-		Bonus3: +20% increased defense. -10% total damage dealt.
-		Bonus5: Taking damage increases your damage dealt by 5%. Lasts 5 seconds, stacks up to 5 times.
-		Bonus12: When a nearby ally takes damage, they take 50% less damage, and you take 50% of the damage.
-		Bonus20: After taking damage, gain a Perseverance Mark. Your next hit will add your Defense to your armor penetration.
+		Bonus3: Health pickups also restore mana. Mana pickups also restore health.
+		Bonus5: +1% damage for each buff and debuff active on you.
+		Bonus12: Gain up to +50 max health based on current mana, and +50 max mana based on current health.
+		Bonus20: At full health, gain a Perseverance Mark. The next hit consumes the mark to deal 50% less damage, but depletes all mana.
 	}
 
 	Determination: {
@@ -665,7 +1374,7 @@ SoulTraits: {
 
 	TitanForgeItem: {
 		DisplayName: Titan Forge
-		Tooltip: A workbench forged from dark energy, used to craft powerful items. Can only be found in a Dark World.
+		Tooltip: A workbench forged from dark energy, used to craft powerful items. Can occasionaly be found in a Dark World.
 	}
 }
 
@@ -675,4 +1384,14 @@ DamageClasses: {
 	RangedSummonDamageClass.DisplayName: Ranged (Summoner) damage
 	MagicRogueDamageClass.DisplayName: Magic (Rogue) damage
 	SummonerMeleeDamageClass.DisplayName: Summoner (Melee) damage
+}
+
+Conditions: {
+	HasJustice: Requires JUSTICE soul trait
+	HasKindness: Requires KINDNESS soul trait
+	HasBravery: Requires BRAVERY soul trait
+	HasPatience: Requires PATIENCE soul trait
+	HasIntegrity: Requires INTEGRITY soul trait
+	HasPerseverance: Requires PERSEVERANCE soul trait
+	HasDetermination: Requires DETERMINATION soul trait
 }

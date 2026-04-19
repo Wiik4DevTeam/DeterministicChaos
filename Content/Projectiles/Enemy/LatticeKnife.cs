@@ -10,8 +10,8 @@ namespace DeterministicChaos.Content.Projectiles.Enemy
 {
     public class LatticeKnife : ModProjectile
     {
-        private const int FollowTime = 60; // 1 second at 60fps
-        private const int StopTime = 12; // 0.2 seconds
+        private const int FollowTime = 40; // Wait while indicator telegraphs
+        private const int StopTime = 2; // Brief pause before dash
         private const int DashSpeed = 60;
         private const int TotalLifetime = FollowTime + StopTime + 120; // Total duration
         private const float MinDistance = 300f;
@@ -22,6 +22,7 @@ namespace DeterministicChaos.Content.Projectiles.Enemy
         private bool hasStopped = false;
         private bool hasDashed = false;
         private bool prevHasDashed = false; // Track previous frame value for sound
+        private bool hasPlayedSpawnSound = false;
         private int indicatorId = -1;
 
         public override void SetStaticDefaults()
@@ -91,8 +92,6 @@ namespace DeterministicChaos.Content.Projectiles.Enemy
             
             if (indicatorId >= 0 && indicatorId < Main.maxProjectiles)
             {
-                // Adjust indicator lifetime to match knife phases
-                Main.projectile[indicatorId].timeLeft = FollowTime + StopTime;
                 Main.projectile[indicatorId].netUpdate = true;
                 
                 // Move knife backwards by half the indicator height so it lines up
@@ -108,64 +107,83 @@ namespace DeterministicChaos.Content.Projectiles.Enemy
 
         public override void OnSpawn(Terraria.DataStructures.IEntitySource source)
         {
-            // ai[0] = target player index
-            int targetIndex = (int)Projectile.ai[0];
-            
-            if (targetIndex >= 0 && targetIndex < Main.maxPlayers)
+            if (Main.netMode != NetmodeID.MultiplayerClient)
             {
-                Player target = Main.player[targetIndex];
-                if (target.active && !target.dead)
+                if ((int)Projectile.ai[0] == -1)
                 {
-                    // Only calculate on server/singleplayer
-                    if (Main.netMode != NetmodeID.MultiplayerClient)
+                    // Arena-based spawn: position already set by boss
+                    // ai[1] = dash direction X, ai[2] = dash direction Y
+                    dashDirection = new Vector2(Projectile.ai[1], Projectile.ai[2]).SafeNormalize(Vector2.UnitX);
+                    Projectile.rotation = dashDirection.ToRotation();
+                    SpawnIndicator();
+                    Projectile.netUpdate = true;
+                }
+                else
+                {
+                    // Legacy player-relative spawn
+                    int targetIndex = (int)Projectile.ai[0];
+                    if (targetIndex >= 0 && targetIndex < Main.maxPlayers)
                     {
-                        // Random angle around player
-                        float angle = Main.rand.NextFloat(0f, MathHelper.TwoPi);
-                        
-                        // Random distance between min and max
-                        float distance = Main.rand.NextFloat(MinDistance, MaxDistance);
-                        
-                        // Position knife at that distance and angle
-                        Vector2 spawnPos = target.Center + new Vector2(distance, 0f).RotatedBy(angle);
-                        Projectile.Center = spawnPos;
-                        
-                        // Calculate dash direction (towards player with random variance)
-                        Vector2 baseDirection = (target.Center - Projectile.Center).SafeNormalize(Vector2.UnitX);
-                        
-                        float angleVariance = Main.rand.NextFloat(-MathHelper.PiOver4, MathHelper.PiOver4);
-                        dashDirection = baseDirection.RotatedBy(angleVariance);
-                        
-                        // Point in dash direction
-                        Projectile.rotation = dashDirection.ToRotation();
-                        
-                        // Spawn indicator line showing the path
-                        SpawnIndicator();
-                        
-                        // CRITICAL: Sync the spawned values to clients
-                        Projectile.netUpdate = true;
+                        Player target = Main.player[targetIndex];
+                        if (target.active && !target.dead)
+                        {
+                            float angle = Main.rand.NextFloat(0f, MathHelper.TwoPi);
+                            float distance = Main.rand.NextFloat(MinDistance, MaxDistance);
+
+                            Projectile.Center = target.Center + new Vector2(distance, 0f).RotatedBy(angle);
+
+                            Vector2 baseDirection = (target.Center - Projectile.Center).SafeNormalize(Vector2.UnitX);
+                            float angleVariance = Main.rand.NextFloat(-MathHelper.PiOver4, MathHelper.PiOver4);
+                            dashDirection = baseDirection.RotatedBy(angleVariance);
+
+                            Projectile.rotation = dashDirection.ToRotation();
+                            SpawnIndicator();
+                            Projectile.netUpdate = true;
+                        }
                     }
                 }
             }
-            
-            // Play knife spawn sound
+
             if (Main.netMode != NetmodeID.Server)
             {
-                SoundEngine.PlaySound(new SoundStyle("DeterministicChaos/Assets/Sounds/KnightKnifeSpawn")
-                {
-                    Volume = 0.5f
-                }, Projectile.Center);
+                // Sound moved to first AI tick for MP consistency
             }
         }
 
         public override void AI()
         {
+            // Play spawn sound on first AI tick (runs on all clients, unlike OnSpawn)
+            // Only play if knife is near the local player's view to avoid hearing all 19+ at once
+            if (!hasPlayedSpawnSound && Main.netMode != NetmodeID.Server)
+            {
+                hasPlayedSpawnSound = true;
+                float distToCamera = Vector2.Distance(Projectile.Center, Main.screenPosition + new Vector2(Main.screenWidth, Main.screenHeight) * 0.5f);
+                if (distToCamera < 600f)
+                {
+                    SoundEngine.PlaySound(new SoundStyle("DeterministicChaos/Assets/Sounds/KnightKnifeSpawn")
+                    {
+                        Volume = 0.5f,
+                        MaxInstances = 0,
+                        PitchVariance = 0.15f,
+                        SoundLimitBehavior = SoundLimitBehavior.IgnoreNew
+                    }, Projectile.Center);
+                }
+            }
+
             // Check if hasDashed just changed from false to true (on clients via sync)
             if (hasDashed && !prevHasDashed && Main.netMode != NetmodeID.Server)
             {
-                SoundEngine.PlaySound(new SoundStyle("DeterministicChaos/Assets/Sounds/KnifeLaunch")
+                float distToCamera = Vector2.Distance(Projectile.Center, Main.screenPosition + new Vector2(Main.screenWidth, Main.screenHeight) * 0.5f);
+                if (distToCamera < 600f)
                 {
-                    Volume = 0.7f
-                }, Projectile.Center);
+                    SoundEngine.PlaySound(new SoundStyle("DeterministicChaos/Assets/Sounds/KnifeLaunch")
+                    {
+                        Volume = 0.7f,
+                        MaxInstances = 0,
+                        PitchVariance = 0.15f,
+                        SoundLimitBehavior = SoundLimitBehavior.IgnoreNew
+                    }, Projectile.Center);
+                }
             }
             prevHasDashed = hasDashed;
             
@@ -197,12 +215,13 @@ namespace DeterministicChaos.Content.Projectiles.Enemy
                 if (!hasDashed)
                 {
                     hasDashed = true;
-                    
-                    // Dash in the stored direction
-                    Projectile.velocity = dashDirection * DashSpeed;
                     Projectile.hostile = true; // Now deals damage
                     Projectile.netUpdate = true;
                 }
+                
+                // Set velocity every tick so clients always get correct movement
+                // even if the hasDashed sync arrives late
+                Projectile.velocity = dashDirection * DashSpeed;
                 
                 Lighting.AddLight(Projectile.Center, 1.0f, 1.0f, 1.0f);
             }

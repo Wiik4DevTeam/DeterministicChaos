@@ -9,6 +9,8 @@ using Terraria.GameContent;
 using Terraria.ID;
 using Terraria.ModLoader;
 using Terraria.ObjectData;
+using DeterministicChaos.Content.NPCs.Bosses;
+using DeterministicChaos.Content.Systems;
 
 namespace DeterministicChaos.Content.Tiles
 {
@@ -63,7 +65,14 @@ namespace DeterministicChaos.Content.Tiles
         {
             if (SubworldSystem.IsActive<Subworlds.DarkDimension>())
             {
+                if (NPC.AnyNPCs(ModContent.NPCType<TitanBody>()))
+                {
+                    CombatText.NewText(Main.LocalPlayer.Hitbox, Color.Red, "Cannot leave while the Titan lives!");
+                    return true;
+                }
+
                 SoundEngine.PlaySound(SoundID.Item6, Main.LocalPlayer.Center);
+                ERAMProgressSystem.IsTransitioningSubworld = true;
                 SubworldSystem.Exit();
                 return true;
             }

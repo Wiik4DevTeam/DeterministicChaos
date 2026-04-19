@@ -17,7 +17,7 @@ namespace DeterministicChaos.Content.SoulTraits.Buffs
         public override void Update(Player player, ref int buffIndex)
         {
             var traitPlayer = player.GetModPlayer<SoulTraitPlayer>();
-            if (traitPlayer.IntegrityMarkStacks <= 0)
+            if (!traitPlayer.IntegrityMarkActive)
             {
                 player.DelBuff(buffIndex);
                 buffIndex--;

@@ -69,6 +69,7 @@ namespace DeterministicChaos.Content.SoulTraits.Armor
     public class HeartLocketPlayer : ModPlayer
     {
         public bool hasHeartLocket;
+        public bool hasTrueHeartLocket;
         public float currentDamageBonus;
         public float currentAttackSpeedBonus;
         public int currentDefenseBonus;
@@ -77,6 +78,7 @@ namespace DeterministicChaos.Content.SoulTraits.Armor
         public override void ResetEffects()
         {
             hasHeartLocket = false;
+            hasTrueHeartLocket = false;
             currentDamageBonus = 0f;
             currentAttackSpeedBonus = 0f;
             currentDefenseBonus = 0;
@@ -90,13 +92,19 @@ namespace DeterministicChaos.Content.SoulTraits.Armor
                 // Calculate missing health percentage (0 to 1)
                 float missingHealthPercent = 1f - (Player.statLife / (float)Player.statLifeMax2);
                 
-                // Maximum bonuses at 1 HP: +15% damage, +15% attack speed, +10 defense, +10% move speed
+                // TrueHeartLocket: +25% damage, +25% attack speed, +15 defense, +15% move speed
+                // HeartLocket:     +15% damage, +15% attack speed, +10 defense, +10% move speed
+                float maxDamage = hasTrueHeartLocket ? 0.25f : 0.15f;
+                float maxAttackSpeed = hasTrueHeartLocket ? 0.25f : 0.15f;
+                int maxDefense = hasTrueHeartLocket ? 15 : 10;
+                float maxMoveSpeed = hasTrueHeartLocket ? 0.15f : 0.10f;
+                
                 float bonusMultiplier = missingHealthPercent;
                 
-                currentDamageBonus = 0.15f * bonusMultiplier;
-                currentAttackSpeedBonus = 0.15f * bonusMultiplier;
-                currentDefenseBonus = (int)(10 * bonusMultiplier);
-                currentMoveSpeedBonus = 0.10f * bonusMultiplier;
+                currentDamageBonus = maxDamage * bonusMultiplier;
+                currentAttackSpeedBonus = maxAttackSpeed * bonusMultiplier;
+                currentDefenseBonus = (int)(maxDefense * bonusMultiplier);
+                currentMoveSpeedBonus = maxMoveSpeed * bonusMultiplier;
                 
                 Player.GetDamage(DamageClass.Generic) += currentDamageBonus;
                 Player.GetAttackSpeed(DamageClass.Generic) += currentAttackSpeedBonus;
@@ -109,6 +117,13 @@ namespace DeterministicChaos.Content.SoulTraits.Armor
                     Dust dust = Dust.NewDustDirect(Player.position, Player.width, Player.height, DustID.LifeDrain, 0f, -1f, 100, default, 0.8f * missingHealthPercent);
                     dust.noGravity = true;
                     dust.velocity *= 0.5f;
+
+                    // Extra intense particles for TrueHeartLocket
+                    if (hasTrueHeartLocket && Main.rand.NextBool(2))
+                    {
+                        Dust redDust = Dust.NewDustDirect(Player.position, Player.width, Player.height, DustID.LifeDrain, 0f, -2f, 50, default, 1.2f * missingHealthPercent);
+                        redDust.noGravity = true;
+                    }
                 }
             }
         }

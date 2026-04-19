@@ -25,10 +25,11 @@ namespace DeterministicChaos.Content.SoulTraits
         private bool isWaving = false;
         private int waveTimer = 0;
 
-        // Help dialogue state: -1 = not in help mode, 0+ = current page index
-        private int helpDialogueIndex = -1;
+        // Menu state: 0 = main menu, 1 = traits sub-menu, 2 = dialogue pages
+        private int menuState = 0;
+        private int dialoguePageIndex = 0;
 
-        private List<string> GetHelpDialogueLines()
+        private List<string> GetDialogueLines()
         {
             var lines = new List<string>();
 
@@ -42,12 +43,12 @@ namespace DeterministicChaos.Content.SoulTraits
                 lines.Add(Language.GetTextValue("Mods.DeterministicChaos.Dialogue.Gerson.HelpPostHardmode2"));
                 lines.Add(Language.GetTextValue("Mods.DeterministicChaos.Dialogue.Gerson.HelpPostHardmode3"));
             }
-            else if (NPC.downedBoss3) // Post-Skeletron, Pre-Hardmode
+            else if (NPC.downedBoss3)
             {
                 lines.Add(Language.GetTextValue("Mods.DeterministicChaos.Dialogue.Gerson.HelpPreHardmode1"));
                 lines.Add(Language.GetTextValue("Mods.DeterministicChaos.Dialogue.Gerson.HelpPreHardmode2"));
             }
-            else // Pre-Skeletron
+            else
             {
                 lines.Add(Language.GetTextValue("Mods.DeterministicChaos.Dialogue.Gerson.HelpPreSkeletron1"));
                 lines.Add(Language.GetTextValue("Mods.DeterministicChaos.Dialogue.Gerson.HelpPreSkeletron2"));
@@ -179,8 +180,9 @@ namespace DeterministicChaos.Content.SoulTraits
             isWaving = true;
             waveTimer = 120;
 
-            // Reset help dialogue when re-opening chat
-            helpDialogueIndex = -1;
+            // Reset menu state when opening chat
+            menuState = 0;
+            dialoguePageIndex = 0;
 
             if (traitPlayer.CurrentTrait == SoulTraitType.None)
             {
@@ -208,91 +210,92 @@ namespace DeterministicChaos.Content.SoulTraits
 
         public override void SetChatButtons(ref string button, ref string button2)
         {
-            if (helpDialogueIndex >= 0)
+            switch (menuState)
             {
-                // In help mode: button1 = Next/Close, button2 = Shop
-                var lines = GetHelpDialogueLines();
-                bool isLastPage = helpDialogueIndex >= lines.Count - 1;
-                button = isLastPage
-                    ? Language.GetTextValue("Mods.DeterministicChaos.Dialogue.Gerson.Close")
-                    : Language.GetTextValue("Mods.DeterministicChaos.Dialogue.Gerson.Next");
-                button2 = Language.GetTextValue("LegacyInterface.28"); // "Shop"
-            }
-            else
-            {
-                // Normal mode
-                Player player = Main.LocalPlayer;
-                SoulTraitPlayer traitPlayer = player.GetModPlayer<SoulTraitPlayer>();
+                case 0: // Main menu
+                    button = Language.GetTextValue("LegacyInterface.28"); // "Shop"
+                    button2 = Language.GetTextValue("Mods.DeterministicChaos.Dialogue.Gerson.Traits");
+                    break;
 
-                if (traitPlayer.TraitLocked)
-                {
-                    button = Language.GetTextValue("Mods.DeterministicChaos.Dialogue.Gerson.ViewTrait");
-                }
-                else
-                {
-                    button = Language.GetTextValue("Mods.DeterministicChaos.Dialogue.Gerson.ChooseTrait");
-                }
+                case 1: // Traits sub-menu
+                    button = Language.GetTextValue("Mods.DeterministicChaos.Dialogue.Gerson.Dialogue");
+                    button2 = Language.GetTextValue("Mods.DeterministicChaos.Dialogue.Gerson.SelectTrait");
+                    break;
 
-                button2 = Language.GetTextValue("Mods.DeterministicChaos.Dialogue.Gerson.Help");
+                case 2: // Dialogue pages
+                    var lines = GetDialogueLines();
+                    bool isLastPage = dialoguePageIndex >= lines.Count - 1;
+                    button = isLastPage
+                        ? Language.GetTextValue("Mods.DeterministicChaos.Dialogue.Gerson.Back")
+                        : Language.GetTextValue("Mods.DeterministicChaos.Dialogue.Gerson.Next");
+                    button2 = Language.GetTextValue("Mods.DeterministicChaos.Dialogue.Gerson.Back");
+                    break;
             }
         }
 
         public override void OnChatButtonClicked(bool firstButton, ref string shopName)
         {
-            if (helpDialogueIndex >= 0)
+            switch (menuState)
             {
-                // Currently in help mode
-                if (firstButton)
-                {
-                    var lines = GetHelpDialogueLines();
-                    bool isLastPage = helpDialogueIndex >= lines.Count - 1;
-
-                    if (isLastPage)
+                case 0: // Main menu
+                    if (firstButton)
                     {
-                        // Close help — close the chat window entirely
-                        helpDialogueIndex = -1;
-                        Main.npcChatText = "";
-                        Main.LocalPlayer.SetTalkNPC(-1);
+                        // Shop
+                        shopName = ShopName;
                     }
                     else
                     {
-                        // Advance to next help page
-                        helpDialogueIndex++;
-                        Main.npcChatText = lines[helpDialogueIndex];
+                        // Traits sub-menu
+                        menuState = 1;
                     }
-                }
-                else
-                {
-                    // Shop button while in help mode
-                    helpDialogueIndex = -1;
-                    shopName = ShopName;
-                }
-                return;
-            }
+                    break;
 
-            if (firstButton)
-            {
-                Player player = Main.LocalPlayer;
-                SoulTraitPlayer traitPlayer = player.GetModPlayer<SoulTraitPlayer>();
+                case 1: // Traits sub-menu
+                    if (firstButton)
+                    {
+                        // Dialogue
+                        menuState = 2;
+                        dialoguePageIndex = 0;
+                        var lines = GetDialogueLines();
+                        if (lines.Count > 0)
+                        {
+                            Main.npcChatText = lines[0];
+                        }
+                    }
+                    else
+                    {
+                        // Select Trait - open UI
+                        ModContent.GetInstance<GersonTraitUISystem>().OpenTraitSelection();
+                    }
+                    break;
 
-                if (traitPlayer.TraitLocked)
-                {
-                    // Just show info about current trait
-                    string traitName = SoulTraitData.GetTraitName(traitPlayer.CurrentTrait);
-                    Main.npcChatText = Language.GetTextValue("Mods.DeterministicChaos.Dialogue.Gerson.TraitInfo", traitName);
-                }
-                else
-                {
-                    // Open trait selection UI
-                    ModContent.GetInstance<GersonTraitUISystem>().OpenTraitSelection();
-                }
-            }
-            else
-            {
-                // Help button clicked — enter help mode
-                var lines = GetHelpDialogueLines();
-                helpDialogueIndex = 0;
-                Main.npcChatText = lines[0];
+                case 2: // Dialogue pages
+                    if (firstButton)
+                    {
+                        var lines = GetDialogueLines();
+                        bool isLastPage = dialoguePageIndex >= lines.Count - 1;
+                        
+                        if (isLastPage)
+                        {
+                            // Go back to traits sub-menu
+                            menuState = 1;
+                        }
+                        else
+                        {
+                            // Next page
+                            dialoguePageIndex++;
+                            if (dialoguePageIndex < lines.Count)
+                            {
+                                Main.npcChatText = lines[dialoguePageIndex];
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // Back to traits sub-menu
+                        menuState = 1;
+                    }
+                    break;
             }
         }
 
@@ -300,28 +303,44 @@ namespace DeterministicChaos.Content.SoulTraits
         {
             var shop = new NPCShop(Type, ShopName);
             
-            // Soul Trait Accessories, one for each trait
-            shop.Add<CloudyGlasses>();   // Perseverance
-            shop.Add<CowboyHat>();       // Justice
-            shop.Add<FadedRibbon>();     // Patience
-            shop.Add<HeartLocket>();     // Determination
-            shop.Add<ManlyBandana>();    // Bravery
-            shop.Add<OldTuTu>();         // Integrity
-            shop.Add<StainedApron>();    // Kindness
+            // Custom conditions for each soul trait
+            Condition hasJustice = new Condition("Mods.DeterministicChaos.Conditions.HasJustice", () => 
+                Main.LocalPlayer.GetModPlayer<SoulTraitPlayer>().CurrentTrait == SoulTraitType.Justice);
+            Condition hasKindness = new Condition("Mods.DeterministicChaos.Conditions.HasKindness", () => 
+                Main.LocalPlayer.GetModPlayer<SoulTraitPlayer>().CurrentTrait == SoulTraitType.Kindness);
+            Condition hasBravery = new Condition("Mods.DeterministicChaos.Conditions.HasBravery", () => 
+                Main.LocalPlayer.GetModPlayer<SoulTraitPlayer>().CurrentTrait == SoulTraitType.Bravery);
+            Condition hasPatience = new Condition("Mods.DeterministicChaos.Conditions.HasPatience", () => 
+                Main.LocalPlayer.GetModPlayer<SoulTraitPlayer>().CurrentTrait == SoulTraitType.Patience);
+            Condition hasIntegrity = new Condition("Mods.DeterministicChaos.Conditions.HasIntegrity", () => 
+                Main.LocalPlayer.GetModPlayer<SoulTraitPlayer>().CurrentTrait == SoulTraitType.Integrity);
+            Condition hasPerseverance = new Condition("Mods.DeterministicChaos.Conditions.HasPerseverance", () => 
+                Main.LocalPlayer.GetModPlayer<SoulTraitPlayer>().CurrentTrait == SoulTraitType.Perseverance);
+            Condition hasDetermination = new Condition("Mods.DeterministicChaos.Conditions.HasDetermination", () => 
+                Main.LocalPlayer.GetModPlayer<SoulTraitPlayer>().CurrentTrait == SoulTraitType.Determination);
+            
+            // Soul Trait Accessories - only show for matching trait
+            shop.Add<CloudyGlasses>(hasPerseverance);   // Perseverance
+            shop.Add<CowboyHat>(hasJustice);            // Justice
+            shop.Add<FadedRibbon>(hasPatience);         // Patience
+            shop.Add<HeartLocket>(hasDetermination);    // Determination
+            shop.Add<ManlyBandana>(hasBravery);         // Bravery
+            shop.Add<OldTuTu>(hasIntegrity);            // Integrity
+            shop.Add<StainedApron>(hasKindness);        // Kindness
 
-            // Minor Soul Essence — always available
+            // Soul Trait Weapons - only show for matching trait after Skeletron
+            shop.Add<RustyKnife>(Condition.DownedSkeletron, hasDetermination);
+            shop.Add<FryingPan>(Condition.DownedSkeletron, hasKindness);
+            shop.Add<HollowGun>(Condition.DownedSkeletron, hasJustice);
+            shop.Add<TornNotebook>(Condition.DownedSkeletron, hasPerseverance);
+            shop.Add<BalletShoes>(Condition.DownedSkeletron, hasIntegrity);
+            shop.Add<ToyKnife>(Condition.DownedSkeletron, hasPatience);
+            shop.Add<ToughGlove>(Condition.DownedSkeletron, hasBravery);
+
+            // Minor Soul Essence, always available
             shop.Add<SoulEssenceT1>();
 
-            // Rusty Knife — available after Skeletron is defeated
-            shop.Add<RustyKnife>(Condition.DownedSkeletron);
-
-            // Frying Pan — available after Skeletron is defeated
-            shop.Add<FryingPan>(Condition.DownedSkeletron);
-
-            // Hollow Gun — available after Skeletron is defeated
-            shop.Add<HollowGun>(Condition.DownedSkeletron);
-
-            // Game Controller (ERAM Summon) — available after entering Hardmode
+            // Game Controller (ERAM Summon), available after entering Hardmode (for all traits)
             shop.Add<ERAMSummon>(Condition.Hardmode);
             
             shop.Register();

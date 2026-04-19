@@ -126,9 +126,6 @@ namespace DeterministicChaos.Content.NPCs.Bosses
         {
             // Drop a heart when killed
             Item.NewItem(NPC.GetSource_Death(), NPC.getRect(), ItemID.Heart);
-            Item.NewItem(NPC.GetSource_Death(), NPC.getRect(), ItemID.Heart);
-            Item.NewItem(NPC.GetSource_Death(), NPC.getRect(), ItemID.Heart);
-            Item.NewItem(NPC.GetSource_Death(), NPC.getRect(), ItemID.Heart);
         }
     }
 }

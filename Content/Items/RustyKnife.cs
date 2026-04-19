@@ -17,7 +17,7 @@ namespace DeterministicChaos.Content.Items
         {
             Item.width = 30;
             Item.height = 30;
-            Item.damage = 11;
+            Item.damage = 14;
             Item.knockBack = 2.5f;
             Item.useTime = 12;
             Item.useAnimation = 12;
@@ -37,7 +37,7 @@ namespace DeterministicChaos.Content.Items
         public override void SetStaticDefaults()
         {
             // Register +3 Determination weapon investment
-            SoulTraitGlobalItem.RegisterWeaponInvestment(Type, 3);
+            SoulTraitGlobalItem.RegisterWeaponInvestment(Type, 3, SoulTraitType.Determination);
         }
 
         public override bool AltFunctionUse(Player player)
@@ -64,7 +64,7 @@ namespace DeterministicChaos.Content.Items
                 // Alt fire: check if prompt is already active
                 if (knifePlayer.PromptActive)
                 {
-                    // Second press — lock the marker (handled in RustyKnifePlayer)
+                    // Second press, lock the marker (handled in RustyKnifePlayer)
                     // Don't actually "use" the item again
                     return false;
                 }
@@ -83,7 +83,11 @@ namespace DeterministicChaos.Content.Items
             }
             else
             {
-                // Normal knife swing — don't allow during prompt
+                // Normal knife swing, requires Determination trait
+                if (player.GetModPlayer<SoulTraitPlayer>().CurrentTrait != SoulTraitType.Determination)
+                    return false;
+
+                // Don't allow during prompt
                 if (knifePlayer.PromptActive)
                     return false;
 

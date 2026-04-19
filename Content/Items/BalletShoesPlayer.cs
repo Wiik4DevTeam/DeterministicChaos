@@ -3,6 +3,7 @@ using Terraria;
 using Terraria.Audio;
 using Terraria.ID;
 using Terraria.ModLoader;
+using DeterministicChaos.Content.SoulTraits;
 
 namespace DeterministicChaos.Content.Items
 {
@@ -68,6 +69,10 @@ namespace DeterministicChaos.Content.Items
 
         public override bool FreeDodge(Player.HurtInfo info)
         {
+            // Only works with Integrity trait
+            if (Player.GetModPlayer<SoulTraitPlayer>().CurrentTrait != SoulTraitType.Integrity)
+                return false;
+
             // Check if we're in the parry window - completely negate damage
             if (parryActiveTimer > 0)
             {
@@ -78,7 +83,7 @@ namespace DeterministicChaos.Content.Items
                 GainStack();
                 
                 // Parry sound
-                SoundEngine.PlaySound(SoundID.DD2_CrystalCartImpact with { Pitch = 0.5f }, Player.Center);
+                SoundEngine.PlaySound(new SoundStyle("DeterministicChaos/Assets/Sounds/Parry") with { PitchVariance = 0.2f }, Player.Center);
                 
                 // Golden parry burst effect
                 for (int i = 0; i < 20; i++)
@@ -107,6 +112,10 @@ namespace DeterministicChaos.Content.Items
 
         public override void ModifyHurt(ref Player.HurtModifiers modifiers)
         {
+            // Only works with Integrity trait
+            if (Player.GetModPlayer<SoulTraitPlayer>().CurrentTrait != SoulTraitType.Integrity)
+                return;
+
             // If we have stacks (and not parrying), use one to halve damage
             if (ParryStacks > 0 && parryActiveTimer <= 0)
             {
@@ -118,6 +127,10 @@ namespace DeterministicChaos.Content.Items
 
         public override void OnHurt(Player.HurtInfo info)
         {
+            // Only works with Integrity trait
+            if (Player.GetModPlayer<SoulTraitPlayer>().CurrentTrait != SoulTraitType.Integrity)
+                return;
+
             // Consume a stack if we had one (damage was halved in ModifyHurt)
             if (ParryStacks > 0)
             {
@@ -170,8 +183,8 @@ namespace DeterministicChaos.Content.Items
             // Gain a stack on hit (up to 3)
             GainStack();
             
-            // Stack gain sound
-            SoundEngine.PlaySound(SoundID.DD2_WitherBeastCrystalImpact with { Pitch = 0.3f, Volume = 0.7f }, Player.Center);
+            // Parry sound on hit
+            SoundEngine.PlaySound(new SoundStyle("DeterministicChaos/Assets/Sounds/Parry") with { PitchVariance = 0.2f }, Player.Center);
 
             // Grant immunity frames so player doesn't take damage after dashing into enemy
             Player.immuneTime = IMMUNITY_FRAMES_ON_HIT;

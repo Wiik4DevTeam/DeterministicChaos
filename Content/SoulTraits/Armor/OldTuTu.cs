@@ -1,7 +1,9 @@
+using System;
 using CalamityMod;
 using Microsoft.Xna.Framework;
 using Terraria;
 using Terraria.Audio;
+using Terraria.DataStructures;
 using Terraria.ID;
 using Terraria.ModLoader;
 
@@ -83,9 +85,16 @@ namespace DeterministicChaos.Content.SoulTraits.Armor
     public class OldTuTuPlayer : ModPlayer
     {
         public bool hasOldTuTu;
+        public bool hasSturdySkirt;
         public int dashCooldown;
         public int dashTimer;
         public Vector2 dashDirection; // Omnidirectional
+
+        // DoT conversion fields (SturdySkirt)
+        public float pendingDotDamage;
+        public int dotTimer;
+        private float dotDamageAccumulator; // Tracks fractional damage between ticks
+        private const int DotDuration = 120; // 2 seconds
         
         // Pre-hardmode balanced values
         private const int DashCooldownDuration = 60;
@@ -98,6 +107,7 @@ namespace DeterministicChaos.Content.SoulTraits.Armor
         public override void ResetEffects()
         {
             hasOldTuTu = false;
+            hasSturdySkirt = false;
         }
 
         public override void PreUpdateMovement()
@@ -133,8 +143,69 @@ namespace DeterministicChaos.Content.SoulTraits.Armor
             if (dashCooldown > 0)
                 dashCooldown--;
             
+            // Process DoT ticks (SturdySkirt)
+            if (dotTimer > 0 && pendingDotDamage > 0)
+            {
+                // Accumulate fractional damage per tick
+                float damagePerTick = pendingDotDamage / dotTimer;
+                dotDamageAccumulator += damagePerTick;
+                pendingDotDamage -= damagePerTick;
+                dotTimer--;
+
+                // Only deal whole points of damage when accumulated
+                int tickDamage = (int)dotDamageAccumulator;
+                if (tickDamage > 0)
+                {
+                    Player.statLife -= tickDamage;
+                    dotDamageAccumulator -= tickDamage;
+
+                    // Kill the player if health reaches 0
+                    if (Player.statLife <= 0)
+                    {
+                        Player.statLife = 0;
+                        pendingDotDamage = 0;
+                        dotTimer = 0;
+                        dotDamageAccumulator = 0;
+                        Player.KillMe(PlayerDeathReason.ByCustomReason($"{Player.name} succumbed to lingering wounds."), tickDamage, 0);
+                    }
+                }
+
+                // Purple poison dust
+                if (Main.rand.NextBool(4))
+                {
+                    Dust dust = Dust.NewDustDirect(Player.position, Player.width, Player.height, DustID.PurpleTorch);
+                    dust.velocity = new Vector2(Main.rand.NextFloat(-1f, 1f), Main.rand.NextFloat(-2f, -0.5f));
+                    dust.noGravity = true;
+                    dust.scale = 0.8f;
+                }
+            }
+            else
+            {
+                pendingDotDamage = 0;
+                dotTimer = 0;
+                dotDamageAccumulator = 0;
+            }
+
             // Check for dash input here (after movement processing)
             CheckDashInput();
+        }
+
+        public override void OnHurt(Player.HurtInfo info)
+        {
+            if (hasSturdySkirt && Player.GetModPlayer<SoulTraitPlayer>().CurrentTrait == SoulTraitType.Integrity)
+            {
+                if (info.Damage > 1)
+                {
+                    // Capture the post-defense damage for DoT
+                    pendingDotDamage += info.Damage;
+                    dotTimer = DotDuration;
+
+                    // Heal back the direct hit (minus 1 so it still registers)
+                    Player.statLife += info.Damage - 1;
+                    if (Player.statLife > Player.statLifeMax2)
+                        Player.statLife = Player.statLifeMax2;
+                }
+            }
         }
         
         private void CheckDashInput()

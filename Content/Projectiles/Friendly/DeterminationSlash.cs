@@ -64,12 +64,12 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
 
             if (aliveTimer <= NormalFlightTicks)
             {
-                // Normal flight phase — full size
+                // Normal flight phase, full size
                 Projectile.scale = baseScale;
             }
             else if (aliveTimer <= TotalLifetime)
             {
-                // Shrink phase — scale down to 0
+                // Shrink phase, scale down to 0
                 float shrinkProgress = (float)(aliveTimer - NormalFlightTicks) / ShrinkTicks;
                 Projectile.scale = MathHelper.Lerp(baseScale, 0f, shrinkProgress);
             }

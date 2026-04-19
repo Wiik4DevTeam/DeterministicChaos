@@ -3,6 +3,8 @@ using Microsoft.Xna.Framework;
 using Terraria;
 using Terraria.ID;
 using Terraria.ModLoader;
+using DeterministicChaos.Content.NPCs.DarkWorldEnemies;
+using DeterministicChaos.Content.Items.Sparks;
 
 namespace DeterministicChaos.Content.SoulTraits
 {
@@ -22,6 +24,68 @@ namespace DeterministicChaos.Content.SoulTraits
                     }
                 }
             }
+
+            // Dark World enemies: 20% chance to drop a Spark matching the nearest player's trait
+            if (Main.netMode != NetmodeID.MultiplayerClient && IsDarkWorldEnemy(npc))
+            {
+                Player closest = FindClosestPlayer(npc);
+                if (closest != null)
+                {
+                    var traitPlayer = closest.GetModPlayer<SoulTraitPlayer>();
+                    int sparkType = GetSparkForTrait(traitPlayer.CurrentTrait);
+
+                    if (sparkType > 0 && Main.rand.NextFloat() < 0.2f)
+                    {
+                        int dropAmount = Main.rand.Next(3, 6); // 3-5 sparks per drop
+                        Item.NewItem(npc.GetSource_Loot(), npc.getRect(), sparkType, dropAmount);
+                    }
+                }
+            }
+        }
+
+        private static bool IsDarkWorldEnemy(NPC npc)
+        {
+            return npc.type == ModContent.NPCType<DarkEye>()
+                || npc.type == ModContent.NPCType<ArmoredZombie>()
+                || npc.type == ModContent.NPCType<HauntedHelmet>()
+                || npc.type == ModContent.NPCType<MetalSlime>();
+        }
+
+        private static Player FindClosestPlayer(NPC npc)
+        {
+            Player closest = null;
+            float closestDist = float.MaxValue;
+
+            for (int i = 0; i < Main.maxPlayers; i++)
+            {
+                Player p = Main.player[i];
+                if (p.active && !p.dead)
+                {
+                    float dist = Vector2.DistanceSquared(npc.Center, p.Center);
+                    if (dist < closestDist)
+                    {
+                        closestDist = dist;
+                        closest = p;
+                    }
+                }
+            }
+
+            return closest;
+        }
+
+        private static int GetSparkForTrait(SoulTraitType trait)
+        {
+            return trait switch
+            {
+                SoulTraitType.Justice => ModContent.ItemType<SparkOfJustice>(),
+                SoulTraitType.Kindness => ModContent.ItemType<SparkOfKindness>(),
+                SoulTraitType.Bravery => ModContent.ItemType<SparkOfBravery>(),
+                SoulTraitType.Patience => ModContent.ItemType<SparkOfPatience>(),
+                SoulTraitType.Integrity => ModContent.ItemType<SparkOfIntegrity>(),
+                SoulTraitType.Perseverance => ModContent.ItemType<SparkOfPerseverance>(),
+                SoulTraitType.Determination => ModContent.ItemType<SparkOfDetermination>(),
+                _ => 0  // None, no drop
+            };
         }
 
         public override void EditSpawnRate(Player player, ref int spawnRate, ref int maxSpawns)

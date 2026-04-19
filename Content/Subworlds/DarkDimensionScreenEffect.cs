@@ -9,54 +9,15 @@ using ReLogic.Content;
 
 namespace DeterministicChaos.Content.Subworlds
 {
-    public class DarkDimensionScreenEffect : ModSystem
-    {
-        public const string FilterName = "DeterministicChaos:DarkDimensionBlueShift";
-        
-        public override void Load()
-        {
-            if (Main.dedServ)
-                return;
-            
-            // Load the blue shift shader and register the filter
-            var shaderRef = new Ref<Effect>(ModContent.Request<Effect>("DeterministicChaos/Assets/Effects/BlueShift", AssetRequestMode.ImmediateLoad).Value);
-            Filters.Scene[FilterName] = new Filter(new ScreenShaderData(shaderRef, "BlueShiftPass"), EffectPriority.VeryHigh);
-            Filters.Scene[FilterName].Load();
-        }
-
-        public override void Unload()
-        {
-            // Filters are automatically cleaned up by tModLoader
-        }
-
-        public override void PostUpdateEverything()
-        {
-            bool isInDarkDimension = SubworldSystem.IsActive<DarkDimension>();
-            
-            if (isInDarkDimension && !Main.gameMenu)
-            {
-                if (!Filters.Scene[FilterName].IsActive())
-                {
-                    Filters.Scene.Activate(FilterName);
-                }
-            }
-            else
-            {
-                if (Filters.Scene[FilterName].IsActive())
-                {
-                    Filters.Scene.Deactivate(FilterName);
-                }
-            }
-        }
-    }
+    // Blue shift shader removed, blue paint on tiles is used instead
 
     public class DarkDimensionLighting : GlobalTile
     {
         public override void ModifyLight(int i, int j, int type, ref float r, ref float g, ref float b)
         {
-            if (SubworldSystem.IsActive<DarkDimension>())
+            if (DarkDimension.IsInDarkWorld)
             {
-                // Subtle ambient light with slight blue tint to complement the shader
+                // Subtle ambient light with slight blue tint
                 r = System.Math.Max(r, 0.08f);
                 g = System.Math.Max(g, 0.10f);
                 b = System.Math.Max(b, 0.18f);
@@ -68,7 +29,7 @@ namespace DeterministicChaos.Content.Subworlds
     {
         public override void PostUpdate()
         {
-            if (SubworldSystem.IsActive<DarkDimension>())
+            if (DarkDimension.IsInDarkWorld)
             {
                 // Blue-tinted light around the player
                 Lighting.AddLight(Player.Center, 0.2f, 0.25f, 0.5f);
@@ -85,7 +46,7 @@ namespace DeterministicChaos.Content.Subworlds
         
         public override bool IsSceneEffectActive(Player player)
         {
-            return SubworldSystem.IsActive<DarkDimension>();
+            return DarkDimension.IsInDarkWorld;
         }
 
         public override void SpecialVisuals(Player player, bool isActive)
@@ -106,7 +67,7 @@ namespace DeterministicChaos.Content.Subworlds
     {
         public override void ModifySunLightColor(ref Color tileColor, ref Color backgroundColor)
         {
-            if (SubworldSystem.IsActive<DarkDimension>())
+            if (DarkDimension.IsInDarkWorld)
             {
                 // Force pure black background
                 backgroundColor = Color.Black;

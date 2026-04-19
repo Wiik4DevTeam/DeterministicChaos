@@ -69,6 +69,7 @@ namespace DeterministicChaos.Content.SoulTraits.Armor
     public class StainedApronPlayer : ModPlayer
     {
         public bool hasStainedApron;
+        public bool hasCaringApron;
         
         // Track health of nearby teammates and NPCs for healing detection
         private int[] lastTeammateHealth = new int[Main.maxPlayers];
@@ -78,6 +79,7 @@ namespace DeterministicChaos.Content.SoulTraits.Armor
         public override void ResetEffects()
         {
             hasStainedApron = false;
+            hasCaringApron = false;
         }
 
         public override void PostUpdate()
@@ -155,29 +157,40 @@ namespace DeterministicChaos.Content.SoulTraits.Armor
                     CombatText.NewText(Player.getRect(), CombatText.HealLife, cappedHeal);
                 }
                 
+                // Caring Apron: reduce potion sickness cooldown
+                if (hasCaringApron && Player.potionDelay > 0)
+                {
+                    // Reduce by 1/4th the heal amount in seconds, capped at 1 second (60 ticks)
+                    int reductionTicks = System.Math.Min((int)(cappedHeal / 4f * 60f), 60);
+                    Player.potionDelay = System.Math.Max(0, Player.potionDelay - reductionTicks);
+                    
+                    // Green sparkle feedback
+                    if (reductionTicks > 0)
+                    {
+                        for (int d = 0; d < 4; d++)
+                        {
+                            Dust dust = Dust.NewDustDirect(Player.position, Player.width, Player.height, DustID.GreenTorch, 0f, -1f, 100, default, 0.8f);
+                            dust.noGravity = true;
+                            dust.velocity *= 0.5f;
+                        }
+                    }
+                }
+                
                 // Small cooldown to prevent spam
                 healCooldown = 10;
             }
-        }
 
-        public override void PostUpdateBuffs()
-        {
-            // Store current health of all players for next frame comparison
+            // Save snapshots AFTER the comparison so that heals from projectile updates
+            // (which run after player updates) are detected next frame.
             for (int i = 0; i < Main.maxPlayers; i++)
             {
                 if (Main.player[i].active)
-                {
                     lastTeammateHealth[i] = Main.player[i].statLife;
-                }
             }
-            
-            // Store current health of all NPCs for next frame comparison
             for (int i = 0; i < Main.maxNPCs; i++)
             {
                 if (Main.npc[i].active)
-                {
                     lastNPCHealth[i] = Main.npc[i].life;
-                }
             }
         }
         

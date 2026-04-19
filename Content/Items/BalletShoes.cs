@@ -15,7 +15,7 @@ namespace DeterministicChaos.Content.Items
         {
             Item.width = 30;
             Item.height = 30;
-            Item.damage = 18;
+            Item.damage = 23;
             Item.knockBack = 4f;
             Item.useTime = 20;
             Item.useAnimation = 20;
@@ -34,7 +34,7 @@ namespace DeterministicChaos.Content.Items
         public override void SetStaticDefaults()
         {
             // Register +3 Integrity weapon investment
-            SoulTraitGlobalItem.RegisterWeaponInvestment(Type, 3);
+            SoulTraitGlobalItem.RegisterWeaponInvestment(Type, 3, SoulTraitType.Integrity);
         }
 
         public override bool CanUseItem(Player player)
@@ -95,6 +95,17 @@ namespace DeterministicChaos.Content.Items
 
         public override void ModifyTooltips(System.Collections.Generic.List<TooltipLine> tooltips)
         {
+            // Integrity color: Blue (30, 144, 255)
+            Color integrityColor = new Color(30, 144, 255);
+            
+            foreach (var line in tooltips)
+            {
+                if (line.Mod == "Terraria" && line.Name == "ItemName")
+                {
+                    line.OverrideColor = integrityColor;
+                }
+            }
+
             var player = Main.LocalPlayer;
             var shoesPlayer = player.GetModPlayer<BalletShoesPlayer>();
             

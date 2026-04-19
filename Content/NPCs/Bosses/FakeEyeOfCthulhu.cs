@@ -1,5 +1,6 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using DeterministicChaos.Content.Projectiles.Enemy;
 using Terraria;
 using Terraria.Audio;
 using Terraria.GameContent;
@@ -16,6 +17,7 @@ namespace DeterministicChaos.Content.NPCs.Bosses
         private int freezeTimer = 0;
         private bool hasPlayedSwoon = false;
         private bool hasSpawnedCutscene = false;
+        private bool hasSpawnedSlash = false;
         
         public override void SetStaticDefaults()
         {
@@ -52,12 +54,14 @@ namespace DeterministicChaos.Content.NPCs.Bosses
         {
             writer.Write(freezeTimer);
             writer.Write(hasSpawnedCutscene);
+            writer.Write(hasSpawnedSlash);
         }
         
         public override void ReceiveExtraAI(System.IO.BinaryReader reader)
         {
             freezeTimer = reader.ReadInt32();
             hasSpawnedCutscene = reader.ReadBoolean();
+            hasSpawnedSlash = reader.ReadBoolean();
         }
         
         public override void OnSpawn(Terraria.DataStructures.IEntitySource source)
@@ -97,6 +101,33 @@ namespace DeterministicChaos.Content.NPCs.Bosses
                     }
                 }
                 
+                // Spawn a knight slash telegraph over the eye before the break
+                if (freezeTimer == 200 && !hasSpawnedSlash)
+                {
+                    hasSpawnedSlash = true;
+
+                    if (Main.netMode != NetmodeID.MultiplayerClient)
+                    {
+                        int type = ModContent.ProjectileType<SlashIndicator>();
+                        float baseAngle = MathHelper.PiOver4; // Diagonal slash
+
+                        int id = Projectile.NewProjectile(
+                            NPC.GetSource_FromAI(),
+                            NPC.Center,
+                            new Vector2(1f, 0f), // rotation direction
+                            type,
+                            0, 0f, Main.myPlayer,
+                            0f,        // ai[0] = damage (0 for cutscene)
+                            baseAngle  // ai[1] = base angle
+                        );
+
+                        if (id >= 0 && id < Main.maxProjectiles)
+                            Main.projectile[id].netUpdate = true;
+                    }
+
+                    NPC.netUpdate = true;
+                }
+
                 if (freezeTimer == 260 && !hasSpawnedCutscene)
                 {
                     hasSpawnedCutscene = true;

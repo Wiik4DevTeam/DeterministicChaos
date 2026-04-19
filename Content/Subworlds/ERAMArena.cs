@@ -1,10 +1,12 @@
 using SubworldLibrary;
+using System;
 using Terraria;
 using Terraria.ID;
 using Terraria.ModLoader;
 using Terraria.WorldBuilding;
 using Microsoft.Xna.Framework;
 using System.Collections.Generic;
+using System.Reflection;
 using DeterministicChaos.Content.Tiles;
 using DeterministicChaos.Content.Walls;
 using DeterministicChaos.Content.NPCs.Bosses;
@@ -37,9 +39,6 @@ namespace DeterministicChaos.Content.Subworlds
         // Persistent flag, tracks if player has ever entered this arena before
         // This persists across game sessions via ModSystem saving
         public static bool hasEnteredBefore = false;
-        
-        // Track the player who is currently in the arena (multiplayer support)
-        public static int currentArenaPlayer = -1;
         
         public override int Width => 200;
         public override int Height => 200;
@@ -159,6 +158,47 @@ namespace DeterministicChaos.Content.Subworlds
             Main.spawnTileY = centerY;
         }
         
+        private static bool pendingCalamityRestore = false;
+        
+        // --- SubworldLibrary data transfer for Calamity difficulty ---
+
+        public override void CopyMainWorldData()
+        {
+            bool revenge = false;
+            bool death = false;
+
+            if (ModLoader.TryGetMod("CalamityMod", out Mod cal))
+            {
+                try
+                {
+                    Type calWorldType = cal.Code?.GetType("CalamityMod.World.CalamityWorld");
+                    if (calWorldType != null)
+                    {
+                        var revengeField = calWorldType.GetField("revenge",
+                            BindingFlags.Public | BindingFlags.Static);
+                        var deathField = calWorldType.GetField("death",
+                            BindingFlags.Public | BindingFlags.Static);
+
+                        if (revengeField != null)
+                            revenge = (bool)revengeField.GetValue(null);
+                        if (deathField != null)
+                            death = (bool)deathField.GetValue(null);
+                    }
+                }
+                catch { }
+            }
+
+            SubworldSystem.CopyWorldData("CalamityRevenge", revenge);
+            SubworldSystem.CopyWorldData("CalamityDeath", death);
+        }
+
+        public override void ReadCopiedMainWorldData()
+        {
+            DarkDimension.CachedRevengeance = SubworldSystem.ReadCopiedWorldData<bool>("CalamityRevenge");
+            DarkDimension.CachedDeath = SubworldSystem.ReadCopiedWorldData<bool>("CalamityDeath");
+            DarkDimension._needsRestore = DarkDimension.CachedRevengeance || DarkDimension.CachedDeath;
+        }
+
         public override void OnEnter()
         {
             SubworldSystem.noReturn = true;
@@ -166,6 +206,11 @@ namespace DeterministicChaos.Content.Subworlds
             dialogueStarted = false;
             dialogueComplete = false;
             dialogueTimer = 0;
+
+            if (DarkDimension._needsRestore)
+                DarkDimension.RestoreCalamityDifficulty();
+
+            pendingCalamityRestore = DarkDimension._needsRestore;
         }
         
         public override void OnLoad()
@@ -174,10 +219,24 @@ namespace DeterministicChaos.Content.Subworlds
             dialogueStarted = false;
             dialogueComplete = false;
             dialogueTimer = 0;
+
+            // Runs AFTER SystemLoader.OnWorldLoad() where Calamity resets.
+            if (DarkDimension._needsRestore)
+                DarkDimension.RestoreCalamityDifficulty();
+
+            pendingCalamityRestore = DarkDimension._needsRestore;
         }
         
         public override void Update()
         {
+            // Restore Calamity difficulty on first tick (after all ModSystem hooks)
+            if (pendingCalamityRestore)
+            {
+                pendingCalamityRestore = false;
+                DarkDimension.RestoreCalamityDifficulty();
+                Systems.ERAMNetworkHandler.SendCalamityDifficultySync();
+            }
+            
             // Check if any player is active
             bool playerReady = false;
             for (int i = 0; i < Main.maxPlayers; i++)
@@ -207,9 +266,15 @@ namespace DeterministicChaos.Content.Subworlds
                     dialogueTimer = 2800; // ~30 seconds for 6 dialogues
                     StartERAMDialogue();
                 }
+                else if (ERAMProgressSystem.ERAMDefeated)
+                {
+                    dialogueTimer = 600; // ~10 seconds for 2 dialogues
+                    StartERAMDialogue();
+                }
                 else
                 {
-                    dialogueTimer = 120; // ~6 seconds for 1 dialogue
+                    dialogueTimer = 600; // ~10 seconds for 2 dialogues
+                    StartERAMDialogue();
                 }
             
             }
@@ -274,12 +339,20 @@ namespace DeterministicChaos.Content.Subworlds
                 
                 ERAMNetworkHandler.SendDialoguePacket(texts, lingerTimes);
             }
+            else if (ERAMProgressSystem.ERAMDefeated)
+            {
+                // Player has defeated ERAM before - acknowledge the rematch
+                ERAMNetworkHandler.SendDialoguePacket(
+                    new string[] { "Back for more? How greedy.", "Show me that fire again." },
+                    new float[] { 3f, 3f }
+                );
+            }
             else
             {
-                // Subsequent entries, just the final line
+                // Player has died to ERAM before - taunt about the failure
                 ERAMNetworkHandler.SendDialoguePacket(
-                    new string[] { "Ready your knife, before it grows dull." },
-                    new float[] { 4f }
+                    new string[] { "... You again?", "Try not to bore me this time." },
+                    new float[] { 3f, 3f }
                 );
             }
         }
@@ -291,8 +364,6 @@ namespace DeterministicChaos.Content.Subworlds
         
         public override void OnExit()
         {
-            // Clear the arena player tracking when exiting
-            currentArenaPlayer = -1;
         }
     }
 }

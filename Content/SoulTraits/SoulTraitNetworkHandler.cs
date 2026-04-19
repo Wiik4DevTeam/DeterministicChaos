@@ -46,7 +46,7 @@ namespace DeterministicChaos.Content.SoulTraits
             packet.Write(traitPlayer.KindnessMarkTimer);
             packet.Write(traitPlayer.BraveryMarkActive);
             packet.Write(traitPlayer.PatienceMarkStacks);
-            packet.Write(traitPlayer.IntegrityMarkStacks);
+            packet.Write(traitPlayer.IntegrityMarkActive);
             packet.Write(traitPlayer.PerseveranceMarkActive);
             packet.Write(traitPlayer.DeterminationMarkActive);
             packet.Write(traitPlayer.DeterminationSavedPosition.X);
@@ -116,7 +116,7 @@ namespace DeterministicChaos.Content.SoulTraits
             traitPlayer.KindnessMarkTimer = reader.ReadInt32();
             traitPlayer.BraveryMarkActive = reader.ReadBoolean();
             traitPlayer.PatienceMarkStacks = reader.ReadInt32();
-            traitPlayer.IntegrityMarkStacks = reader.ReadInt32();
+            traitPlayer.IntegrityMarkActive = reader.ReadBoolean();
             traitPlayer.PerseveranceMarkActive = reader.ReadBoolean();
             traitPlayer.DeterminationMarkActive = reader.ReadBoolean();
             traitPlayer.DeterminationSavedPosition = new Vector2(reader.ReadSingle(), reader.ReadSingle());

@@ -61,6 +61,11 @@ namespace DeterministicChaos.Content.NPCs.Bosses
         private bool hasAppeared = false;
         private bool hasSpawnedBoss = false;
         
+        // Sound tracking (client-side, triggered by phase state)
+        private bool playedLaughSound = false;
+        private bool playedChargeSound = false;
+        private bool playedRoarSound = false;
+        
         private int animColumn = 0;
         private int animRow = 0;
         private int animTick = 0;
@@ -207,9 +212,10 @@ namespace DeterministicChaos.Content.NPCs.Bosses
                     animColumn = 1;
                     animRow = 0;
                     
-                    // Play laugh sound at start
-                    if (cutsceneTimer == 1)
+                    // Play laugh sound once when entering this phase
+                    if (!playedLaughSound)
                     {
+                        playedLaughSound = true;
                         if (Main.netMode != NetmodeID.Server)
                         {
                             SoundEngine.PlaySound(new SoundStyle("DeterministicChaos/Assets/Sounds/Laugh")
@@ -245,7 +251,16 @@ namespace DeterministicChaos.Content.NPCs.Bosses
                         animRow = 0;
                         animTick = 0;
                         NPC.netUpdate = true;
-                        
+                    }
+                    break;
+
+                case Phase_Column2:
+                    animColumn = 2;
+                    
+                    // Play charge sound once when entering this phase
+                    if (!playedChargeSound)
+                    {
+                        playedChargeSound = true;
                         if (Main.netMode != NetmodeID.Server)
                         {
                             SoundEngine.PlaySound(new SoundStyle("DeterministicChaos/Assets/Sounds/KnightEnergyCharge")
@@ -254,12 +269,6 @@ namespace DeterministicChaos.Content.NPCs.Bosses
                             }, NPC.Center);
                         }
                     }
-                    break;
-
-                case Phase_Column2:
-                    animColumn = 2;
-                    
-                    RoaringKnightBackgroundSystem.ShowBackground = true;
                     
                     if (cutsceneTimer < Phase2_InitialPause)
                     {
@@ -267,8 +276,10 @@ namespace DeterministicChaos.Content.NPCs.Bosses
                     }
                     else
                     {
-                        if (cutsceneTimer == Phase2_InitialPause)
+                        // Play roar sound once when entering the roar section
+                        if (!playedRoarSound)
                         {
+                            playedRoarSound = true;
                             if (Main.netMode != NetmodeID.Server)
                             {
                                 SoundEngine.PlaySound(new SoundStyle("DeterministicChaos/Assets/Sounds/KnightRoar")

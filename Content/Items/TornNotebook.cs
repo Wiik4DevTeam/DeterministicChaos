@@ -60,7 +60,7 @@ namespace DeterministicChaos.Content.Items
         public override void SetStaticDefaults()
         {
             // Register +3 Perseverance weapon investment
-            SoulTraitGlobalItem.RegisterWeaponInvestment(Type, 3);
+            SoulTraitGlobalItem.RegisterWeaponInvestment(Type, 3, SoulTraitType.Perseverance);
         }
 
         public override bool AltFunctionUse(Player player)

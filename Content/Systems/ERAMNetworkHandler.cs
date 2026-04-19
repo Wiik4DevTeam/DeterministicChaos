@@ -16,6 +16,8 @@ namespace DeterministicChaos.Content.Systems
         public const byte ERAMSummonPacket = 0;
         public const byte DarkWorldCutscenePacket = 1;
         public const byte DialogueSyncPacket = 2;
+        public const byte TitanCutscenePacket = 4;
+        public const byte CalamityDifficultyPacket = 5;
 
         public static void HandleERAMSummonPacket(BinaryReader reader, int whoAmI)
         {
@@ -28,6 +30,8 @@ namespace DeterministicChaos.Content.Systems
             {
                 // Server received request from client, enter subworld for all players
                 // SubworldLibrary handles transporting all connected players automatically
+                DarkDimension.CacheCalamityDifficulty();
+                ERAMProgressSystem.IsTransitioningSubworld = true;
                 SubworldSystem.Enter<ERAMArena>();
             }
         }
@@ -151,6 +155,70 @@ namespace DeterministicChaos.Content.Systems
                 {
                     DialogueSystem.Instance.QueueDialogue(texts[i], lingerTimes[i]);
                 }
+            }
+        }
+
+        public static void SendTitanCutscenePacket(Vector2 position)
+        {
+            if (Main.netMode == NetmodeID.SinglePlayer)
+                return;
+
+            ModPacket packet = ModContent.GetInstance<DeterministicChaos>().GetPacket();
+            packet.Write(TitanCutscenePacket);
+            packet.Write(position.X);
+            packet.Write(position.Y);
+            packet.Send();
+        }
+
+        public static void HandleTitanCutscenePacket(BinaryReader reader, int whoAmI)
+        {
+            float x = reader.ReadSingle();
+            float y = reader.ReadSingle();
+            Vector2 position = new Vector2(x, y);
+
+            if (Main.netMode == NetmodeID.Server)
+            {
+                // Server received from client, relay to all other clients
+                ModPacket packet = ModContent.GetInstance<DeterministicChaos>().GetPacket();
+                packet.Write(TitanCutscenePacket);
+                packet.Write(x);
+                packet.Write(y);
+                packet.Send(-1, whoAmI);
+            }
+
+            // Start cutscene on this side (server tracks phase/timer, clients do visuals)
+            TitanSpawnCutscene.StartCutsceneAtPosition(position);
+        }
+
+        /// <summary>
+        /// Sends the cached Calamity difficulty flags to all clients so they can
+        /// restore Revengeance/Death mode after a subworld load.
+        /// Call this on the server after RestoreCalamityDifficulty().
+        /// </summary>
+        public static void SendCalamityDifficultySync()
+        {
+            if (Main.netMode != NetmodeID.Server)
+                return;
+
+            ModPacket packet = ModContent.GetInstance<DeterministicChaos>().GetPacket();
+            packet.Write(CalamityDifficultyPacket);
+            packet.Write(DarkDimension.CachedRevengeance);
+            packet.Write(DarkDimension.CachedDeath);
+            packet.Send();
+        }
+
+        public static void HandleCalamityDifficultyPacket(BinaryReader reader, int whoAmI)
+        {
+            bool revengeance = reader.ReadBoolean();
+            bool death = reader.ReadBoolean();
+
+            if (Main.netMode == NetmodeID.MultiplayerClient)
+            {
+                // Apply the difficulty flags on the client via the existing restore mechanism
+                DarkDimension.CachedRevengeance = revengeance;
+                DarkDimension.CachedDeath = death;
+                DarkDimension._needsRestore = revengeance || death;
+                DarkDimension.RestoreCalamityDifficulty();
             }
         }
     }

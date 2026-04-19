@@ -5,13 +5,20 @@ using Terraria.ModLoader;
 using Terraria.WorldBuilding;
 using Terraria.DataStructures;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using System;
 using System.Collections.Generic;
+using System.Reflection;
 using DeterministicChaos.Content.Tiles;
+using DeterministicChaos.Content.Systems;
+using DeterministicChaos.Content.VFX;
+using Terraria.GameContent;
+using ReLogic.Content;
 using StructureHelper.API;
 
 namespace DeterministicChaos.Content.Subworlds
 {
-    public class DarkDimension : Subworld
+    public abstract class DarkDimension : Subworld
     {
         public enum BiomeType
         {
@@ -28,11 +35,149 @@ namespace DeterministicChaos.Content.Subworlds
             Ocean
         }
         
+        // Each concrete biome subworld overrides this to declare its biome.
+        public abstract BiomeType ActiveBiome { get; }
+        
         // Origin point in the main world
         public static int OriginX = 0;
         public static int OriginY = 0;
         public static int WorldSeed = 0;
+        
+        // The biome that was detected before entering. Used to decide which subworld to enter.
         public static BiomeType SourceBiome = BiomeType.Forest;
+        
+        // --- Calamity difficulty flag cache ---
+        // These are read from CalamityWorld before entering a subworld
+        // and restored on the subworld side via OnEnter(), since CalamityWorld
+        // resets its data when a new subworld loads.
+        public static bool CachedRevengeance = false;
+        public static bool CachedDeath = false;
+        internal static bool _needsRestore = false;
+        private static bool _pendingCalamityRestore = false;
+        internal static bool _enteringDarkWorld = false;
+        
+        // Reads Calamity's Revengeance and Death mode flags from CalamityWorld
+        // and caches them in static fields. Call this BEFORE entering any subworld.
+        public static void CacheCalamityDifficulty()
+        {
+            CachedRevengeance = false;
+            CachedDeath = false;
+            _needsRestore = false;
+
+            if (!ModLoader.TryGetMod("CalamityMod", out Mod cal))
+                return;
+
+            try
+            {
+                Type calWorldType = cal.Code?.GetType("CalamityMod.World.CalamityWorld");
+                if (calWorldType == null)
+                    return;
+
+                var revengeField = calWorldType.GetField("revenge",
+                    BindingFlags.Public | BindingFlags.Static);
+                var deathField = calWorldType.GetField("death",
+                    BindingFlags.Public | BindingFlags.Static);
+
+                if (revengeField != null)
+                    CachedRevengeance = (bool)revengeField.GetValue(null);
+                if (deathField != null)
+                    CachedDeath = (bool)deathField.GetValue(null);
+
+                _needsRestore = CachedRevengeance || CachedDeath;
+            }
+            catch { }
+        }
+
+        // Writes the cached Calamity difficulty flags back to CalamityWorld.
+        // Call this AFTER a subworld has loaded (e.g., in OnEnter / first Update tick).
+        public static void RestoreCalamityDifficulty()
+        {
+            if (!_needsRestore)
+                return;
+
+            if (!ModLoader.TryGetMod("CalamityMod", out Mod cal))
+                return;
+
+            try
+            {
+                Type calWorldType = cal.Code?.GetType("CalamityMod.World.CalamityWorld");
+                if (calWorldType == null)
+                    return;
+
+                if (CachedRevengeance)
+                {
+                    var revengeField = calWorldType.GetField("revenge",
+                        BindingFlags.Public | BindingFlags.Static);
+                    revengeField?.SetValue(null, true);
+                }
+
+                if (CachedDeath)
+                {
+                    var deathField = calWorldType.GetField("death",
+                        BindingFlags.Public | BindingFlags.Static);
+                    deathField?.SetValue(null, true);
+                }
+            }
+            catch { }
+        }
+        
+        // Returns true if the player is in ANY dark dimension subworld.
+        public static bool IsInDarkWorld =>
+            SubworldSystem.IsActive<DarkForest>() ||
+            SubworldSystem.IsActive<DarkCorruption>() ||
+            SubworldSystem.IsActive<DarkCrimson>() ||
+            SubworldSystem.IsActive<DarkHallow>() ||
+            SubworldSystem.IsActive<DarkJungle>() ||
+            SubworldSystem.IsActive<DarkDesert>() ||
+            SubworldSystem.IsActive<DarkSnow>() ||
+            SubworldSystem.IsActive<DarkUnderworld>() ||
+            SubworldSystem.IsActive<DarkDungeon>() ||
+            SubworldSystem.IsActive<DarkUnderground>() ||
+            SubworldSystem.IsActive<DarkOcean>();
+        
+        // Returns the biome type of the currently active dark dimension.
+        public static BiomeType CurrentBiome
+        {
+            get
+            {
+                if (SubworldSystem.IsActive<DarkForest>()) return BiomeType.Forest;
+                if (SubworldSystem.IsActive<DarkCorruption>()) return BiomeType.Corruption;
+                if (SubworldSystem.IsActive<DarkCrimson>()) return BiomeType.Crimson;
+                if (SubworldSystem.IsActive<DarkHallow>()) return BiomeType.Hallow;
+                if (SubworldSystem.IsActive<DarkJungle>()) return BiomeType.Jungle;
+                if (SubworldSystem.IsActive<DarkDesert>()) return BiomeType.Desert;
+                if (SubworldSystem.IsActive<DarkSnow>()) return BiomeType.Snow;
+                if (SubworldSystem.IsActive<DarkUnderworld>()) return BiomeType.Underworld;
+                if (SubworldSystem.IsActive<DarkDungeon>()) return BiomeType.Dungeon;
+                if (SubworldSystem.IsActive<DarkUnderground>()) return BiomeType.Underground;
+                if (SubworldSystem.IsActive<DarkOcean>()) return BiomeType.Ocean;
+                return BiomeType.Forest;
+            }
+        }
+        
+        // Enters the dark dimension subworld matching the given biome type.
+        public static void EnterBiome(BiomeType biome)
+        {
+            // Cache Calamity difficulty flags before the subworld transition
+            CacheCalamityDifficulty();
+            ERAMProgressSystem.IsTransitioningSubworld = true;
+            _enteringDarkWorld = true;
+
+            switch (biome)
+            {
+                case BiomeType.Forest: SubworldSystem.Enter<DarkForest>(); break;
+                case BiomeType.Corruption: SubworldSystem.Enter<DarkCorruption>(); break;
+                case BiomeType.Crimson: SubworldSystem.Enter<DarkCrimson>(); break;
+                case BiomeType.Hallow: SubworldSystem.Enter<DarkHallow>(); break;
+                case BiomeType.Jungle: SubworldSystem.Enter<DarkJungle>(); break;
+                case BiomeType.Desert: SubworldSystem.Enter<DarkDesert>(); break;
+                case BiomeType.Snow: SubworldSystem.Enter<DarkSnow>(); break;
+                case BiomeType.Underworld: SubworldSystem.Enter<DarkUnderworld>(); break;
+                case BiomeType.Dungeon: SubworldSystem.Enter<DarkDungeon>(); break;
+                case BiomeType.Underground: SubworldSystem.Enter<DarkUnderground>(); break;
+                case BiomeType.Ocean: SubworldSystem.Enter<DarkOcean>(); break;
+            }
+        }
         
         public override int Width => 800;
         public override int Height => 800;
@@ -53,7 +198,7 @@ namespace DeterministicChaos.Content.Subworlds
         {
             progress.Message = "Entering the Dark World...";
             
-            Terraria.Utilities.UnifiedRandom rand = new Terraria.Utilities.UnifiedRandom(WorldSeed + (int)SourceBiome);
+            Terraria.Utilities.UnifiedRandom rand = new Terraria.Utilities.UnifiedRandom(WorldSeed + (int)ActiveBiome);
             
             // Get biome-specific tiles
             GetBiomeTiles(out ushort surfaceTile, out ushort dirtTile, out ushort stoneTile, out ushort wallType);
@@ -134,7 +279,7 @@ namespace DeterministicChaos.Content.Subworlds
             Main.spawnTileY = spawnY;
             
             // Generate water for Ocean biome (above the sand, not below)
-            if (SourceBiome == BiomeType.Ocean)
+            if (ActiveBiome == BiomeType.Ocean)
             {
                 progress.Message = "Filling ocean...";
                 GenerateOceanWater(heightMap, spawnX, baseSurfaceY);
@@ -148,7 +293,49 @@ namespace DeterministicChaos.Content.Subworlds
             progress.Message = "Placing structures...";
             PlaceSeamHouse(rand, heightMap);
             
+            // Paint every tile and wall blue
+            progress.Message = "Painting the Dark World...";
+            PaintWorldBlue();
+            
             progress.Value = 1f;
+        }
+
+        private void PaintWorldBlue()
+        {
+            // Each biome gets a paint color contrasting its natural palette
+            byte paint = ActiveBiome switch
+            {
+                BiomeType.Forest => PaintID.DeepPinkPaint,         // Green → Pink
+                BiomeType.Desert => PaintID.DeepBluePaint,         // Yellow/Sand → Blue
+                BiomeType.Corruption => PaintID.DeepLimePaint,     // Purple → Lime
+                BiomeType.Crimson => PaintID.DeepCyanPaint,        // Red → Cyan
+                BiomeType.Hallow => PaintID.DeepGreenPaint,        // Pink/Pastel → Green
+                BiomeType.Jungle => PaintID.DeepPurplePaint,       // Green → Purple
+                BiomeType.Snow => PaintID.DeepOrangePaint,         // White/Blue → Orange
+                BiomeType.Underworld => PaintID.DeepTealPaint,     // Red/Orange → Teal
+                BiomeType.Dungeon => PaintID.DeepRedPaint,         // Blue/Grey → Red
+                BiomeType.Underground => PaintID.DeepYellowPaint,  // Brown/Grey → Yellow
+                BiomeType.Ocean => PaintID.DeepVioletPaint,        // Blue → Violet
+                _ => PaintID.DeepBluePaint,
+            };
+            
+            for (int x = 0; x < Width; x++)
+            {
+                for (int y = 0; y < Height; y++)
+                {
+                    Tile tile = Main.tile[x, y];
+                    
+                    if (tile.HasTile)
+                    {
+                        tile.TileColor = paint;
+                    }
+                    
+                    if (tile.WallType > 0)
+                    {
+                        tile.WallColor = paint;
+                    }
+                }
+            }
         }
 
         private void DetermineSeamHousePosition(Terraria.Utilities.UnifiedRandom rand)
@@ -291,7 +478,7 @@ namespace DeterministicChaos.Content.Subworlds
                 
                 float chance = rand.NextFloat();
                 
-                switch (SourceBiome)
+                switch (ActiveBiome)
                 {
                     case BiomeType.Forest:
                         if (chance < 0.06f)
@@ -438,7 +625,7 @@ namespace DeterministicChaos.Content.Subworlds
                 
                 float chance = rand.NextFloat();
                 
-                switch (SourceBiome)
+                switch (ActiveBiome)
                 {
                     case BiomeType.Forest:
                         if (chance < 0.20f)
@@ -640,7 +827,7 @@ namespace DeterministicChaos.Content.Subworlds
 
         private void GetBiomeTiles(out ushort surface, out ushort dirt, out ushort stone, out ushort wall)
         {
-            switch (SourceBiome)
+            switch (ActiveBiome)
             {
                 case BiomeType.Corruption:
                     surface = TileID.CorruptGrass;
@@ -783,14 +970,217 @@ namespace DeterministicChaos.Content.Subworlds
             }
         }
 
+        // --- SubworldLibrary data transfer ---
+        // SubworldLibrary spawns a separate process for each subworld server.
+        // Static fields do NOT survive across processes, so we use
+        // CopyWorldData / ReadCopiedWorldData to pipe the Calamity flags.
+
+        public override void CopyMainWorldData()
+        {
+            // Runs on the MAIN server before the subserver process starts.
+            // CalamityWorld fields are still live in this process.
+            bool revenge = false;
+            bool death = false;
+
+            if (ModLoader.TryGetMod("CalamityMod", out Mod cal))
+            {
+                try
+                {
+                    Type calWorldType = cal.Code?.GetType("CalamityMod.World.CalamityWorld");
+                    if (calWorldType != null)
+                    {
+                        var revengeField = calWorldType.GetField("revenge",
+                            BindingFlags.Public | BindingFlags.Static);
+                        var deathField = calWorldType.GetField("death",
+                            BindingFlags.Public | BindingFlags.Static);
+
+                        if (revengeField != null)
+                            revenge = (bool)revengeField.GetValue(null);
+                        if (deathField != null)
+                            death = (bool)deathField.GetValue(null);
+                    }
+                }
+                catch { }
+            }
+
+            SubworldSystem.CopyWorldData("CalamityRevenge", revenge);
+            SubworldSystem.CopyWorldData("CalamityDeath", death);
+        }
+
+        public override void ReadCopiedMainWorldData()
+        {
+            // Runs in the SUBSERVER process before world gen.
+            // Reads the piped data into our statics so OnLoad() can use them.
+            CachedRevengeance = SubworldSystem.ReadCopiedWorldData<bool>("CalamityRevenge");
+            CachedDeath = SubworldSystem.ReadCopiedWorldData<bool>("CalamityDeath");
+            _needsRestore = CachedRevengeance || CachedDeath;
+        }
+
         public override void OnEnter()
         {
             SubworldSystem.noReturn = true;
-        }
-        
-        public override void OnLoad() { }
-        public override void OnExit() { }
+            _enteringDarkWorld = false;
 
-        public override void DrawMenu(GameTime gameTime) { }
+            // In single-player, statics survive and OnEnter runs before LoadWorld.
+            // The restore here gets overwritten by Calamity's OnWorldLoad reset,
+            // but OnLoad() below will restore again after that.
+            if (_needsRestore)
+                RestoreCalamityDifficulty();
+
+            _pendingCalamityRestore = _needsRestore;
+        }
+
+        public override void OnLoad()
+        {
+            // This runs AFTER SystemLoader.OnWorldLoad() (where Calamity resets
+            // revenge/death to false). Restore the cached flags now.
+            if (_needsRestore)
+                RestoreCalamityDifficulty();
+
+            // Flag for Update() to send a sync packet once clients connect.
+            _pendingCalamityRestore = _needsRestore;
+        }
+        public override void OnExit()
+        {
+            // Clean up all static state to prevent stale data/drawing during world transition
+            DarkPortal.PortalX = -1;
+            FountainVisualSystem.HideFountain = false;
+            BlackSphereSystem.ClearAll();
+            TitanSpawnCutscene.ResetStateLite();
+        }
+
+        public override void Update()
+        {
+            if (_pendingCalamityRestore)
+            {
+                _pendingCalamityRestore = false;
+                RestoreCalamityDifficulty();
+                Systems.ERAMNetworkHandler.SendCalamityDifficultySync();
+            }
+        }
+
+        // Loading screen state
+        private static Effect _invertEffect;
+        private static float _loadingScrollOffset;
+        private static bool _invertEffectLoaded;
+
+        public override void DrawMenu(GameTime gameTime)
+        {
+            // When entering the Dark World from the main world, IsInDarkWorld is already true
+            // (SubworldSystem activates the subworld before the loading screen).
+            // When exiting back to the main world, IsInDarkWorld becomes false.
+            // So: show custom screen when IsInDarkWorld is true, default when false.
+            if (!IsInDarkWorld)
+                return;
+
+            // Draw Terraria's background textures upside-down with inverted colors
+            SpriteBatch sb = Main.spriteBatch;
+            GraphicsDevice device = Main.graphics.GraphicsDevice;
+            int screenW = device.Viewport.Width;
+            int screenH = device.Viewport.Height;
+
+            // Load the invert shader once
+            if (!_invertEffectLoaded)
+            {
+                _invertEffectLoaded = true;
+                try
+                {
+                    _invertEffect = ModContent.Request<Effect>(
+                        "DeterministicChaos/Assets/Effects/InvertColors",
+                        AssetRequestMode.ImmediateLoad).Value;
+                }
+                catch { _invertEffect = null; }
+            }
+
+            // Scroll the background
+            _loadingScrollOffset += (float)gameTime.ElapsedGameTime.TotalSeconds * 30f;
+
+            // SubworldLibrary may call DrawMenu while a SpriteBatch is already active
+            try { sb.End(); } catch { }
+
+            // Draw a black base
+            sb.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.LinearWrap,
+                DepthStencilState.None, RasterizerState.CullNone);
+            Texture2D pixel = TextureAssets.MagicPixel.Value;
+            sb.Draw(pixel, new Rectangle(0, 0, screenW, screenH), Color.Black);
+            sb.End();
+
+            // Draw background layers flipped vertically with inverted colors
+            // Use Terraria's background textures (indices 0 = far sky, 9 = mid clouds, etc.)
+            int[] bgIndices = { 0, 9, 93 };
+
+            if (_invertEffect != null)
+            {
+                sb.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.LinearWrap,
+                    DepthStencilState.None, RasterizerState.CullNone, _invertEffect);
+            }
+            else
+            {
+                sb.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.LinearWrap,
+                    DepthStencilState.None, RasterizerState.CullNone);
+            }
+
+            foreach (int bgIdx in bgIndices)
+            {
+                Texture2D bgTex = null;
+                try
+                {
+                    if (TextureAssets.Background != null && bgIdx < TextureAssets.Background.Length
+                        && TextureAssets.Background[bgIdx] != null)
+                    {
+                        bgTex = TextureAssets.Background[bgIdx].Value;
+                    }
+                }
+                catch { continue; }
+
+                if (bgTex == null)
+                    continue;
+
+                // Calculate parallax scroll speed per layer (further = slower)
+                float parallax = 1f + bgIdx * 0.02f;
+                float scrollX = _loadingScrollOffset * parallax;
+
+                int texW = bgTex.Width;
+                int texH = bgTex.Height;
+
+                // Tile horizontally with scroll, draw flipped vertically
+                float scaleY = screenH / (float)texH;
+                float scaleX = scaleY; // maintain aspect ratio
+                float scaledW = texW * scaleX;
+
+                int copies = (int)(screenW / scaledW) + 2;
+                float startX = -(scrollX % scaledW);
+
+                for (int i = 0; i < copies; i++)
+                {
+                    Vector2 pos = new Vector2(startX + i * scaledW, screenH);
+                    sb.Draw(bgTex, pos, null,
+                        Color.White, 0f,
+                        new Vector2(0, 0),
+                        new Vector2(scaleX, -scaleY), // Negative Y scale = flip vertically
+                        SpriteEffects.None, 0f);
+                }
+            }
+
+            sb.End();
+
+            // Draw loading text
+            sb.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.LinearClamp,
+                DepthStencilState.None, RasterizerState.CullNone);
+
+            string loadingText = "Entering the Dark World...";
+            var font = FontAssets.MouseText.Value;
+            Vector2 textSize = font.MeasureString(loadingText);
+            Vector2 textPos = new Vector2(screenW / 2f - textSize.X / 2f, screenH - 60f);
+
+            // Draw text with border
+            Terraria.Utils.DrawBorderString(sb, loadingText, textPos, Color.White);
+
+            sb.End();
+
+            // Re-open SpriteBatch so SubworldLibrary's DrawSetup can continue drawing (cursor, etc.)
+            sb.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.LinearClamp,
+                DepthStencilState.None, RasterizerState.CullNone, null, Main.UIScaleMatrix);
+        }
     }
 }

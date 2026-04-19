@@ -27,7 +27,7 @@ namespace DeterministicChaos.Content.Projectiles.Enemy
             Projectile.tileCollide = false;
 
             Projectile.penetrate = 1;
-            Projectile.timeLeft = 180;
+            Projectile.timeLeft = 100;
 
             Projectile.scale = 1.0f;
         }

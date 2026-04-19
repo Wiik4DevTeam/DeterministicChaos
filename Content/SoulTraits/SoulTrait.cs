@@ -85,17 +85,17 @@ namespace DeterministicChaos.Content.SoulTraits
                 },
                 SoulTraitType.Integrity => new string[]
                 {
-                    "Increased global critical strike damage by 15%. Decreased critical strike chance by 10%.",
-                    "Increased global attack speed by 15%. Decreased attack damage by 10%.",
+                    "+20% increased defense. -10% total damage dealt.",
+                    "Taking damage increases your damage dealt by 5%. Lasts 5 seconds, stacks up to 5 times.",
                     "Removes all negative effects from previous investment bonuses.",
-                    "After dealing damage, gain an Integrity Mark. Your next critical strike will deal increased damage."
+                    "After taking damage, gain an Integrity Mark. Your next hit will add your Defense to your armor penetration."
                 },
                 SoulTraitType.Perseverance => new string[]
                 {
-                    "+20% increased defense. -10% total damage dealt.",
-                    "Taking damage increases your damage dealt by 5%. Lasts 5 seconds, stacks up to 5 times.",
-                    "When a nearby ally takes damage, they take 50% less damage, and you take 50% of the damage.",
-                    "After taking damage, gain a Perseverance Mark. Your next hit will add your Defense to your armor penetration."
+                    "Health pickups also restore mana. Mana pickups also restore health.",
+                    "+1% damage for each buff and debuff active on you.",
+                    "Gain up to +50 max health based on current mana, and +50 max mana based on current health.",
+                    "At full health, gain a Perseverance Mark. The next hit consumes the mark to deal 50% less damage, but depletes all mana."
                 },
                 SoulTraitType.Determination => new string[]
                 {

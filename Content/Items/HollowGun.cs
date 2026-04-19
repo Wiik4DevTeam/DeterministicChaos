@@ -18,7 +18,7 @@ namespace DeterministicChaos.Content.Items
             Item.width = 20;
             Item.height = 12;
             Item.scale = 0.5f;
-            Item.damage = 10;
+            Item.damage = 15;
             Item.knockBack = 3f;
             Item.useTime = 30;
             Item.useAnimation = 30;
@@ -27,7 +27,7 @@ namespace DeterministicChaos.Content.Items
             Item.autoReuse = true;
             Item.rare = ItemRarityID.Orange;
             Item.value = Item.buyPrice(gold: 3);
-            Item.UseSound = SoundID.Item11;
+            Item.UseSound = SoundID.Item11 with { Volume = 0.6f };
             Item.shoot = ProjectileID.Bullet;
             Item.shootSpeed = 10f;
             Item.useAmmo = AmmoID.Bullet;
@@ -37,7 +37,7 @@ namespace DeterministicChaos.Content.Items
         public override void SetStaticDefaults()
         {
             // Register +3 Justice weapon investment
-            SoulTraitGlobalItem.RegisterWeaponInvestment(Type, 3);
+            SoulTraitGlobalItem.RegisterWeaponInvestment(Type, 3, SoulTraitType.Justice);
         }
 
         public override bool CanUseItem(Player player)
@@ -85,7 +85,7 @@ namespace DeterministicChaos.Content.Items
                     hollowPlayer.ClearMarkedTarget();
                     
                     // Play ChargeShot sound for justice beam
-                    SoundEngine.PlaySound(new SoundStyle("DeterministicChaos/Assets/Sounds/ChargeShot"), position);
+                    SoundEngine.PlaySound(new SoundStyle("DeterministicChaos/Assets/Sounds/ChargeShot") { Volume = 0.6f }, position);
                     
                     return false; // Don't fire normal bullet
                 }

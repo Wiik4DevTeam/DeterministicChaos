@@ -56,6 +56,12 @@ namespace DeterministicChaos
 				case ERAMNetworkHandler.DialogueSyncPacket:
 					ERAMNetworkHandler.HandleDialogueSyncPacket(reader, whoAmI);
 					break;
+				case ERAMNetworkHandler.TitanCutscenePacket:
+					ERAMNetworkHandler.HandleTitanCutscenePacket(reader, whoAmI);
+					break;
+				case ERAMNetworkHandler.CalamityDifficultyPacket:
+					ERAMNetworkHandler.HandleCalamityDifficultyPacket(reader, whoAmI);
+					break;
 				case 3: // Sphere damage sync packet
 					HandleSphereDamagePacket(reader, whoAmI);
 					break;
@@ -66,6 +72,15 @@ namespace DeterministicChaos
 					break;
 				case (byte)TornNotebookNetHandler.MessageType.SyncStoredText:
 					TornNotebookNetHandler.HandlePacket(reader, whoAmI);
+					break;
+				case (byte)SpecialistsNotebookNetHandler.MessageType.SyncStoredText:
+					SpecialistsNotebookNetHandler.HandlePacket(reader, whoAmI);
+					break;
+				case (byte)TheAbstractNetHandler.MessageType.SyncStoredText:
+					TheAbstractNetHandler.HandlePacket(reader, whoAmI);
+					break;
+				case 0xFF: // CookingPot ingredient sync
+					CookingPotPlayer.HandleSyncPacket(reader, whoAmI);
 					break;
 			}
 		}

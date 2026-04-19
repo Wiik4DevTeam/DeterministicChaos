@@ -23,6 +23,12 @@ namespace DeterministicChaos.Content.Items
             Item.rare = ItemRarityID.LightPurple;
         }
 
-        // No recipe, only found in Dark Worlds naturally
+        public override void AddRecipes()
+        {
+            CreateRecipe()
+                .AddIngredient(ModContent.ItemType<Titansblood>(), 10)
+                .AddTile(TileID.MythrilAnvil)
+                .Register();
+        }
     }
 }

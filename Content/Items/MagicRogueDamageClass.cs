@@ -33,7 +33,7 @@ namespace DeterministicChaos.Content.Items
             // Inherit from Calamity's RogueDamageClass at half effectiveness for damage
             if (calamityRogueClass != null && damageClass == calamityRogueClass)
                 return new StatInheritanceData(
-                    damageInheritance: 0.5f,  // Half damage bonus
+                    damageInheritance: 0.3f,  // 0.3x damage bonus
                     critChanceInheritance: 1f,
                     attackSpeedInheritance: 1f,
                     armorPenInheritance: 1f,

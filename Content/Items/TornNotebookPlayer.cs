@@ -22,16 +22,15 @@ namespace DeterministicChaos.Content.Items
         Boom = 1 << 3,        // Explodes on hit
         Crit = 1 << 4,        // Guaranteed crit
         Pierce = 1 << 5,      // Pierces enemies (loses seeking on hit)
-        // Debuffs
-        Fire = 1 << 6,
-        Frostburn = 1 << 7,
-        Poison = 1 << 8,
-        Venom = 1 << 9,
-        Ichor = 1 << 10,
-        Cursed = 1 << 11,
-        Shadowflame = 1 << 12,
-        Daybreak = 1 << 13,
-        Betsy = 1 << 14,
+        // Specialist's Notebook effects
+        Split = 1 << 15,       // On hit, splits into 2 smaller quarter-damage projectiles
+        Partition = 1 << 16,   // Fires 3 letters instead of 1 (above/center/below)
+        Burst = 1 << 17,       // Entire word fires at once in shotgun spread, double word delay
+        Burrow = 1 << 18,      // Letters pass through tiles
+        // The Abstract effects
+        Heal = 1 << 19,        // Letters heal allies for 2 HP; Seek targets allies instead of enemies
+        Aura = 1 << 20,        // Letters orbit the player in an aura ring
+        Rain = 1 << 21,        // Quadruples letters, rain from sky with half damage each
     }
 
     public class TornNotebookPlayer : ModPlayer
@@ -444,8 +443,8 @@ namespace DeterministicChaos.Content.Items
             // Find FAST in the text (case insensitive)
             int fastIndex = text.ToUpper().IndexOf("FAST");
             
-            // FAST applies from the first letter of the word onwards
-            return fastIndex >= 0 && position >= fastIndex;
+            // FAST applies only AFTER the word has been fully shot
+            return fastIndex >= 0 && position >= fastIndex + 4;
         }
 
         private LetterEffects CalculateEffectsForPosition(string text, int position)
@@ -468,24 +467,15 @@ namespace DeterministicChaos.Content.Items
             {
                 { "BOOM", LetterEffects.Boom },
                 { "CRIT", LetterEffects.Crit },
-                { "FIRE", LetterEffects.Fire },
-                { "FROSTBURN", LetterEffects.Frostburn },
-                { "POISON", LetterEffects.Poison },
-                { "VENOM", LetterEffects.Venom },
-                { "ICHOR", LetterEffects.Ichor },
-                { "CURSED", LetterEffects.Cursed },
-                { "SHADOWFLAME", LetterEffects.Shadowflame },
-                { "DAYBREAK", LetterEffects.Daybreak },
-                { "BETSY", LetterEffects.Betsy },
             };
 
-            // Check "subsequent" words - if the word appears before or at this position, effect applies
+            // Check "subsequent" words - effect applies only AFTER the entire keyword has been shot
             foreach (var kv in subsequentWords)
             {
                 int wordIndex = upperText.IndexOf(kv.Key);
-                if (wordIndex >= 0 && wordIndex <= position)
+                if (wordIndex >= 0 && position >= wordIndex + kv.Key.Length)
                 {
-                    // Effects apply to all letters from that position onward
+                    // Effects apply to all letters after the keyword
                     effects |= kv.Value;
                 }
             }
@@ -499,44 +489,12 @@ namespace DeterministicChaos.Content.Items
                     // Check if this position is within the word
                     if (position >= wordIndex && position < wordIndex + kv.Key.Length)
                     {
-                        // Check progression for debuffs
-                        if (IsDebuffAvailable(kv.Value))
-                        {
-                            effects |= kv.Value;
-                        }
+                        effects |= kv.Value;
                     }
                 }
             }
 
             return effects;
-        }
-
-        private bool IsDebuffAvailable(LetterEffects effect)
-        {
-            switch (effect)
-            {
-                case LetterEffects.Fire:
-                case LetterEffects.Frostburn:
-                case LetterEffects.Poison:
-                    return true; // Always available
-
-                case LetterEffects.Ichor:
-                case LetterEffects.Cursed:
-                case LetterEffects.Shadowflame:
-                    return Main.hardMode; // Hardmode required
-
-                case LetterEffects.Venom:
-                    return NPC.downedPlantBoss; // Post-Plantera
-
-                case LetterEffects.Daybreak:
-                    return NPC.downedGolemBoss; // Post-Golem
-
-                case LetterEffects.Betsy:
-                    return Terraria.GameContent.Events.DD2Event.DownedInvasionT3; // Post-Betsy
-
-                default:
-                    return true;
-            }
         }
 
         public void ResetFiringState()

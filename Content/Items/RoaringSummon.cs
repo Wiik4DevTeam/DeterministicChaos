@@ -70,17 +70,9 @@ namespace DeterministicChaos.Content.Items
 
         public override void ModifyTooltips(System.Collections.Generic.List<TooltipLine> tooltips)
         {
-            Color statGray = new Color(60, 60, 60);
             foreach (TooltipLine line in tooltips)
             {
-                // Stats get a grayer color to differentiate from descriptions
-                if (line.Name == "Damage" || line.Name == "Speed" || line.Name == "Knockback" || 
-                    line.Name == "CritChance" || line.Name == "Defense" || line.Name == "UseMana" ||
-                    line.Name == "Consumable" || line.Name == "Material")
-                {
-                    line.OverrideColor = statGray;
-                }
-                else
+                if (line.Name == "ItemName")
                 {
                     line.OverrideColor = Color.Black;
                 }
@@ -89,6 +81,9 @@ namespace DeterministicChaos.Content.Items
 
         public override bool PreDrawTooltipLine(DrawableTooltipLine line, ref int yOffset)
         {
+            if (line.Name != "ItemName")
+                return true;
+
             Vector2 position = new Vector2(line.X, line.Y);
 
             for (int x = -2; x <= 2; x++)

@@ -6,6 +6,7 @@ using Terraria.Audio;
 using Terraria.GameContent;
 using Terraria.ID;
 using Terraria.ModLoader;
+using DeterministicChaos.Content.SoulTraits;
 
 namespace DeterministicChaos.Content.Items
 {
@@ -60,8 +61,9 @@ namespace DeterministicChaos.Content.Items
 
         public override void PostUpdate()
         {
-            // Only process if holding HollowGun
-            if (Player.HeldItem.type != ModContent.ItemType<HollowGun>())
+            // Only process if holding HollowGun with Justice trait
+            if (Player.HeldItem.type != ModContent.ItemType<HollowGun>()
+                || Player.GetModPlayer<SoulTraitPlayer>().CurrentTrait != SoulTraitType.Justice)
             {
                 // Reset jump tracking when not holding the gun
                 wasOnGround = true;
@@ -147,7 +149,7 @@ namespace DeterministicChaos.Content.Items
             rotationTimer = 0;
 
             // Visual/audio feedback
-            SoundEngine.PlaySound(SoundID.Item4 with { Pitch = 0.5f, Volume = 0.7f }, Player.Center);
+            SoundEngine.PlaySound(SoundID.Item4 with { Pitch = 0.5f, Volume = 0.42f }, Player.Center);
 
             // Create dust at target
             NPC target = Main.npc[npcIndex];

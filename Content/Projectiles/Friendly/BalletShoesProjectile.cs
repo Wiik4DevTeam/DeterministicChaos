@@ -13,16 +13,10 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
         // ai[0] = parry stacks when launched
         private int ParryStacks => (int)Projectile.ai[0];
 
-        // Afterimage positions
-        private const int AFTERIMAGE_COUNT = 8;
-        private Vector2[] oldPositions = new Vector2[AFTERIMAGE_COUNT];
-        private float[] oldRotations = new float[AFTERIMAGE_COUNT];
-
         public override void SetStaticDefaults()
         {
-            // Enable trail for afterimages
-            ProjectileID.Sets.TrailCacheLength[Type] = AFTERIMAGE_COUNT;
-            ProjectileID.Sets.TrailingMode[Type] = 2;
+            ProjectileID.Sets.TrailCacheLength[Projectile.type] = 12;
+            ProjectileID.Sets.TrailingMode[Projectile.type] = 2;
         }
 
         public override void SetDefaults()
@@ -31,16 +25,14 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
             Projectile.height = 40;
             Projectile.friendly = true;
             Projectile.hostile = false;
-            Projectile.penetrate = -1; // Infinite pierce
-            Projectile.timeLeft = 20; // Matches kick duration
+            Projectile.penetrate = -1;
+            Projectile.timeLeft = 20;
             Projectile.DamageType = ModContent.GetInstance<SummonerMeleeDamageClass>();
             Projectile.aiStyle = -1;
             Projectile.ignoreWater = true;
             Projectile.tileCollide = false;
             Projectile.usesLocalNPCImmunity = true;
             Projectile.localNPCHitCooldown = 15;
-
-            // Good multiplayer sync
             Projectile.netImportant = true;
         }
 
@@ -49,105 +41,77 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
             Player owner = Main.player[Projectile.owner];
             var shoesPlayer = owner.GetModPlayer<BalletShoesPlayer>();
 
-            // If player parried, kill the projectile immediately
             if (shoesPlayer.HasParriedThisKick)
             {
                 Projectile.Kill();
                 return;
             }
 
-            // Follow the player
-            Projectile.Center = owner.Center + owner.velocity.SafeNormalize(Vector2.Zero) * 20f;
+            // Center hitbox on the player
+            Projectile.Center = owner.Center;
             Projectile.velocity = owner.velocity;
 
-            // Rotate based on movement direction
             if (owner.velocity.Length() > 0.5f)
-            {
                 Projectile.rotation = owner.velocity.ToRotation();
+
+            bool inParryWindow = shoesPlayer.IsCurrentlyInParryWindow;
+            Vector2 dashDir = owner.velocity.SafeNormalize(Vector2.Zero);
+            Vector2 perp = new Vector2(-dashDir.Y, dashDir.X);
+
+            // Flame aura dust, biased forward in movement direction
+            int dustCount = 3 + ParryStacks;
+            int dustType = inParryWindow ? DustID.GoldFlame : DustID.BlueFairy;
+
+            for (int i = 0; i < dustCount; i++)
+            {
+                float forwardBias = Main.rand.NextFloat(0f, 18f);
+                float sideBias = Main.rand.NextFloat(-18f, 18f);
+                Vector2 offset = dashDir * forwardBias + perp * sideBias;
+                Vector2 spawnPos = owner.Center + offset + Main.rand.NextVector2Circular(6f, 6f);
+
+                Vector2 dustVel = -dashDir * Main.rand.NextFloat(2f, 5f) + Main.rand.NextVector2Circular(1.5f, 1.5f);
+
+                Dust flame = Dust.NewDustDirect(spawnPos, 0, 0, dustType, dustVel.X, dustVel.Y);
+                flame.noGravity = true;
+                flame.scale = 1.3f + Main.rand.NextFloat(0.5f) + ParryStacks * 0.15f;
+                flame.fadeIn = 1.5f;
+                flame.alpha = 120;
             }
 
-            // Check parry window for special effects
-            bool inParryWindow = shoesPlayer.IsCurrentlyInParryWindow;
-
-            // Golden particles during parry window
-            if (inParryWindow)
+            // Golden glow during parry window
+            if (inParryWindow && Main.rand.NextBool(2))
             {
-                // Bright golden dust to show parry opportunity
-                Dust gold = Dust.NewDustDirect(
-                    Projectile.Center + Main.rand.NextVector2Circular(20f, 20f),
-                    0, 0,
-                    DustID.GoldFlame,
-                    0f, 0f
-                );
+                Vector2 orbPos = owner.Center + Main.rand.NextVector2Circular(22f, 22f);
+                Dust gold = Dust.NewDustDirect(orbPos, 0, 0, DustID.GoldFlame, 0f, 0f);
                 gold.noGravity = true;
                 gold.scale = 1.2f + Main.rand.NextFloat(0.3f);
                 gold.velocity = Main.rand.NextVector2Circular(2f, 2f);
-
-                // Extra bright light during parry window
-                Lighting.AddLight(Projectile.Center, new Vector3(1f, 0.9f, 0.5f));
+                Lighting.AddLight(owner.Center, new Vector3(1f, 0.9f, 0.5f));
             }
 
-            // Blue sparkles
+            // Dark blue integrity wisps orbiting the player
             if (Main.rand.NextBool(2))
             {
-                Dust sparkle = Dust.NewDustDirect(
-                    Projectile.Center + Main.rand.NextVector2Circular(15f, 15f),
-                    0, 0,
-                    inParryWindow ? DustID.GoldFlame : DustID.BlueTorch,
-                    -owner.velocity.X * 0.2f,
-                    -owner.velocity.Y * 0.2f
-                );
-                sparkle.noGravity = true;
-                sparkle.scale = 0.8f + Main.rand.NextFloat(0.4f);
-                sparkle.fadeIn = 1.2f;
+                float angle = Main.rand.NextFloat(MathHelper.TwoPi);
+                float radius = 14f + Main.rand.NextFloat(10f);
+                Vector2 orbPos = owner.Center + new Vector2((float)System.Math.Cos(angle), (float)System.Math.Sin(angle)) * radius;
+                Dust wisp = Dust.NewDustDirect(orbPos, 0, 0, DustID.BlueTorch, -dashDir.X * 2f, -dashDir.Y * 2f);
+                wisp.noGravity = true;
+                wisp.scale = 1.4f + ParryStacks * 0.3f;
             }
 
-            // Extra blue sparkles trailing behind
-            if (Main.rand.NextBool(3))
-            {
-                Vector2 trailPos = Projectile.Center - owner.velocity.SafeNormalize(Vector2.Zero) * Main.rand.NextFloat(10f, 30f);
-                Dust trail = Dust.NewDustDirect(
-                    trailPos,
-                    0, 0,
-                    inParryWindow ? DustID.GoldFlame : DustID.BlueFairy,
-                    0f, 0f
-                );
-                trail.noGravity = true;
-                trail.scale = 0.6f + Main.rand.NextFloat(0.3f);
-                trail.velocity = Main.rand.NextVector2Circular(1f, 1f);
-            }
-
-            // Purple dust for Integrity theme
-            if (Main.rand.NextBool(3))
-            {
-                Dust dust = Dust.NewDustDirect(
-                    owner.position,
-                    owner.width,
-                    owner.height,
-                    DustID.PurpleTorch,
-                    -owner.velocity.X * 0.3f,
-                    -owner.velocity.Y * 0.3f
-                );
-                dust.noGravity = true;
-                dust.scale = 1.2f + (ParryStacks * 0.3f);
-            }
-
-            // Extra visual for stacks
-            if (ParryStacks > 0 && Main.rand.NextBool(3))
+            // Stack-colored sparks
+            if (ParryStacks > 0 && Main.rand.NextBool(2))
             {
                 Color stackColor = GetStackColor();
-                Dust dust = Dust.NewDustDirect(
-                    owner.Center + Main.rand.NextVector2Circular(20f, 20f),
-                    0, 0,
-                    DustID.WhiteTorch
-                );
+                Vector2 sparkPos = owner.Center + Main.rand.NextVector2Circular(20f, 20f);
+                Dust dust = Dust.NewDustDirect(sparkPos, 0, 0, DustID.WhiteTorch);
                 dust.color = stackColor;
                 dust.noGravity = true;
-                dust.scale = 0.8f + (ParryStacks * 0.2f);
+                dust.scale = 0.8f + ParryStacks * 0.2f;
             }
 
-            // Bright light - blue/purple
-            Lighting.AddLight(Projectile.Center, new Vector3(0.3f, 0.4f, 0.9f) * (1f + ParryStacks * 0.2f));
+            Lighting.AddLight(owner.Center, new Vector3(0.3f, 0.4f, 0.9f) * (1f + ParryStacks * 0.2f));
         }
 
         public override void OnHitNPC(NPC target, NPC.HitInfo hit, int damageDone)
@@ -155,25 +119,18 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
             Player owner = Main.player[Projectile.owner];
             var shoesPlayer = owner.GetModPlayer<BalletShoesPlayer>();
 
-            // Notify player of hit - grants a stack, gives immunity, and knockback
             shoesPlayer.OnKickHitEnemy(target);
-
-            // Focus summons on this target (like whip targeting)
             owner.MinionAttackTargetNPC = target.whoAmI;
 
-            // Hit sound
             SoundEngine.PlaySound(SoundID.DD2_MonkStaffGroundImpact with { Pitch = 0.2f }, target.Center);
 
-            // Impact visuals - purple and blue burst
             for (int i = 0; i < 8 + (ParryStacks * 4); i++)
             {
                 Vector2 dustVel = Main.rand.NextVector2Circular(6f, 6f);
-                Dust dust = Dust.NewDustDirect(target.Center, 0, 0, DustID.PurpleTorch, dustVel.X, dustVel.Y);
+                Dust dust = Dust.NewDustDirect(target.Center, 0, 0, DustID.BlueFairy, dustVel.X, dustVel.Y);
                 dust.noGravity = true;
                 dust.scale = 1.3f + (ParryStacks * 0.2f);
             }
-
-            // Blue sparkle burst on hit
             for (int i = 0; i < 6; i++)
             {
                 Vector2 sparkVel = Main.rand.NextVector2Circular(4f, 4f);
@@ -182,101 +139,94 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
                 spark.scale = 1.2f;
             }
 
-            // End the projectile after hitting
             Projectile.Kill();
         }
 
         public override void ModifyHitNPC(NPC target, ref NPC.HitModifiers modifiers)
         {
-            // Bonus damage with stacks
-            modifiers.FinalDamage += ParryStacks * 0.15f; // +15% damage per stack
-
-            // Bonus crit damage with stacks
+            modifiers.FinalDamage += ParryStacks * 0.15f;
             if (ParryStacks >= 2)
-            {
-                modifiers.CritDamage += 0.25f; // 25% extra crit damage at 2+ stacks
-            }
+                modifiers.CritDamage += 0.25f;
         }
 
         private Color GetStackColor()
         {
-            // Check if in parry window - make it glow bright gold/white
             Player owner = Main.player[Projectile.owner];
             var shoesPlayer = owner.GetModPlayer<BalletShoesPlayer>();
-            
+
             if (shoesPlayer.IsCurrentlyInParryWindow)
-            {
-                // Bright gold/white glow during parry window
-                return new Color(255, 240, 180); // Bright golden
-            }
+                return new Color(255, 240, 180);
 
             return ParryStacks switch
             {
-                1 => new Color(180, 150, 255),  // Light purple
-                2 => new Color(220, 180, 255),  // Brighter purple
-                3 => new Color(255, 200, 255),  // Brightest pink-purple
-                _ => new Color(100, 150, 255)   // Blue-ish default
+                1 => new Color(80, 130, 255),
+                2 => new Color(50, 100, 230),
+                3 => new Color(30, 80, 210),
+                _ => new Color(100, 150, 255)
             };
         }
 
         public override bool PreDraw(ref Color lightColor)
         {
-            SpriteBatch spriteBatch = Main.spriteBatch;
-            Texture2D texture = ModContent.Request<Texture2D>(Texture).Value;
+            Player owner = Main.player[Projectile.owner];
+            Texture2D texture = Terraria.GameContent.TextureAssets.Projectile[Projectile.type].Value;
             Vector2 drawOrigin = texture.Size() / 2f;
+            float movementRotation = Projectile.rotation;
 
-            // Draw afterimages
-            for (int i = 0; i < Projectile.oldPos.Length; i++)
+            var shoesPlayer = owner.GetModPlayer<BalletShoesPlayer>();
+            bool inParryWindow = shoesPlayer.IsCurrentlyInParryWindow;
+
+            float pulse = 0.9f + 0.1f * (float)System.Math.Sin(Main.GameUpdateCount * 0.2f);
+            float baseScale = 1.8f * pulse;
+
+            Main.spriteBatch.End();
+            Main.spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.Additive, SamplerState.PointClamp,
+                DepthStencilState.None, RasterizerState.CullNone, null, Main.GameViewMatrix.TransformationMatrix);
+
+            // Afterimages trailing behind the player
+            for (int i = Projectile.oldPos.Length - 1; i > 0; i--)
             {
-                if (Projectile.oldPos[i] == Vector2.Zero) continue;
+                if (Projectile.oldPos[i] == Vector2.Zero)
+                    continue;
 
-                Vector2 afterimagePos = Projectile.oldPos[i] + Projectile.Size / 2f - Main.screenPosition;
-                float afterimageRot = Projectile.oldRot[i];
-                
-                // Fade out based on index
                 float progress = (float)i / Projectile.oldPos.Length;
                 float alpha = (1f - progress) * 0.5f;
-                float scale = (1f - progress * 0.3f) * (1f + ParryStacks * 0.1f);
-                
-                // Blue-purple gradient for afterimages
-                Color afterimageColor = Color.Lerp(new Color(100, 150, 255), new Color(180, 130, 255), progress) * alpha;
+                float afterScale = baseScale * (1f - progress * 0.3f);
+                Color afterColor = inParryWindow
+                    ? new Color(255, 210, 80) * alpha
+                    : new Color(30, 120, 255) * alpha;
 
-                spriteBatch.Draw(
-                    texture,
-                    afterimagePos,
-                    null,
-                    afterimageColor,
-                    afterimageRot,
-                    drawOrigin,
-                    scale,
-                    SpriteEffects.None,
-                    0f
-                );
+                Vector2 afterPos = Projectile.oldPos[i] + Projectile.Size / 2f - Main.screenPosition;
+                float afterRot = Projectile.oldRot[i];
+
+                Main.spriteBatch.Draw(texture, afterPos, null, afterColor, afterRot,
+                    drawOrigin, afterScale, SpriteEffects.None, 0f);
             }
 
-            // Draw main projectile emissively (ignore lighting, full brightness)
-            Vector2 drawPos = Projectile.Center - Main.screenPosition;
-            Color emissiveColor = GetStackColor(); // Full color, not affected by lighting
-            float mainScale = 1f + ParryStacks * 0.15f;
+            // Main sprite on the player, facing movement direction
+            Vector2 drawPos = owner.Center - Main.screenPosition;
+            Color mainColor = inParryWindow
+                ? new Color(255, 230, 120) * 0.7f
+                : new Color(60, 150, 255) * 0.7f;
+            Main.spriteBatch.Draw(texture, drawPos, null, mainColor, movementRotation,
+                drawOrigin, baseScale, SpriteEffects.None, 0f);
 
-            spriteBatch.Draw(
-                texture,
-                drawPos,
-                null,
-                emissiveColor,
-                Projectile.rotation,
-                drawOrigin,
-                mainScale,
-                SpriteEffects.None,
-                0f
-            );
+            // Brighter core
+            Color coreColor = inParryWindow
+                ? new Color(255, 245, 200) * 0.45f
+                : new Color(160, 210, 255) * 0.45f;
+            Main.spriteBatch.Draw(texture, drawPos, null, coreColor, movementRotation,
+                drawOrigin, baseScale * 0.7f, SpriteEffects.None, 0f);
+
+            Main.spriteBatch.End();
+            Main.spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp,
+                DepthStencilState.None, RasterizerState.CullNone, null, Main.GameViewMatrix.TransformationMatrix);
 
             return false;
         }
 
         public override void OnKill(int timeLeft)
         {
-            // Final dust burst when kick ends - blue and purple
             Player owner = Main.player[Projectile.owner];
             for (int i = 0; i < 8; i++)
             {
@@ -288,7 +238,7 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
             for (int i = 0; i < 6; i++)
             {
                 Vector2 dustVel = Main.rand.NextVector2Circular(3f, 3f);
-                Dust dust = Dust.NewDustDirect(owner.Center, 0, 0, DustID.PurpleTorch, dustVel.X, dustVel.Y);
+                Dust dust = Dust.NewDustDirect(owner.Center, 0, 0, DustID.BlueTorch, dustVel.X, dustVel.Y);
                 dust.noGravity = true;
                 dust.scale = 1f;
             }

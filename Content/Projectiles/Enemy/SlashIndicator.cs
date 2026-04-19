@@ -43,14 +43,7 @@ namespace DeterministicChaos.Content.Projectiles.Enemy
 
             Projectile.timeLeft = Life;
             
-            // Play indicator sound
-            if (Main.netMode != NetmodeID.Server)
-            {
-                SoundEngine.PlaySound(new SoundStyle("DeterministicChaos/Assets/Sounds/KnightIndicator")
-                {
-                    Volume = 0.7f
-                }, Projectile.Center);
-            }
+            // Play indicator sound, moved to first AI tick for MP consistency
             
             Projectile.netUpdate = true;
         }
@@ -69,6 +62,15 @@ namespace DeterministicChaos.Content.Projectiles.Enemy
 
         public override void AI()
         {
+            // Play indicator sound on first AI tick (runs on all clients, unlike OnSpawn)
+            if (Projectile.timeLeft == Life && Main.netMode != NetmodeID.Server)
+            {
+                SoundEngine.PlaySound(new SoundStyle("DeterministicChaos/Assets/Sounds/KnightIndicator")
+                {
+                    Volume = 0.7f
+                }, Projectile.Center);
+            }
+
             // Lock to anchor forever (no following the player).
             Projectile.Center = new Vector2(Projectile.localAI[0], Projectile.localAI[1]);
 

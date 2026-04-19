@@ -72,6 +72,11 @@ namespace DeterministicChaos.Content.VFX
             spheres?.Clear();
         }
 
+        public override void OnWorldUnload()
+        {
+            ClearAll();
+        }
+
         public static int AddSphere(Vector2 position, float width, float height, float widthPulse = 0f, float pulseSpeed = 1f)
         {
             int id = nextID++;

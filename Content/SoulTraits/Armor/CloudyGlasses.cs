@@ -69,10 +69,36 @@ namespace DeterministicChaos.Content.SoulTraits.Armor
     public class CloudyGlassesPlayer : ModPlayer
     {
         public bool hasCloudyGlasses;
+        public bool hasPrismaticGlasses;
+        public int tempMaxManaBonus;
+        public int tempMaxManaTimer;
+        private const int TempManaDuration = 300; // 5 seconds
+        private const int TempManaPerHit = 20; // +20 max mana per hit
+        private const int TempManaMax = 100; // Cap at +100 max mana
 
         public override void ResetEffects()
         {
             hasCloudyGlasses = false;
+            hasPrismaticGlasses = false;
+        }
+
+        public override void PostUpdate()
+        {
+            // Countdown temp mana timer
+            if (tempMaxManaTimer > 0)
+            {
+                tempMaxManaTimer--;
+                if (tempMaxManaTimer <= 0)
+                {
+                    tempMaxManaBonus = 0;
+                }
+            }
+
+            // Apply temporary max mana
+            if (tempMaxManaBonus > 0 && tempMaxManaTimer > 0)
+            {
+                Player.statManaMax2 += tempMaxManaBonus;
+            }
         }
 
         public override void PostHurt(Player.HurtInfo info)
@@ -95,6 +121,22 @@ namespace DeterministicChaos.Content.SoulTraits.Armor
                     if (Player.hurtCooldowns[i] > 0)
                     {
                         Player.hurtCooldowns[i] += 18;
+                    }
+                }
+
+                // Prismatic Glasses: grant temporary max mana on hit
+                if (hasPrismaticGlasses)
+                {
+                    tempMaxManaBonus = System.Math.Min(tempMaxManaBonus + TempManaPerHit, TempManaMax);
+                    tempMaxManaTimer = TempManaDuration;
+
+                    // Prismatic dust burst
+                    for (int i = 0; i < 12; i++)
+                    {
+                        Vector2 vel = Main.rand.NextVector2Circular(4f, 4f);
+                        Color prismaticColor = Main.hslToRgb(Main.rand.NextFloat(), 1f, 0.6f);
+                        Dust dust = Dust.NewDustDirect(Player.position, Player.width, Player.height, DustID.RainbowTorch, vel.X, vel.Y, 100, prismaticColor, 1.4f);
+                        dust.noGravity = true;
                     }
                 }
             }

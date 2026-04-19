@@ -39,8 +39,8 @@ namespace DeterministicChaos.Content.Tiles
             // Localization
             AddMapEntry(new Color(75, 50, 90), Language.GetText("Mods.DeterministicChaos.Tiles.TitanForge.MapEntry"));
 
-            // This tile is a crafting station
-            AdjTiles = new int[] { TileID.WorkBenches, TileID.Anvils };
+            // This tile is a crafting station, inherits workbench, anvil, and mythril/orichalcum anvil
+            AdjTiles = new int[] { TileID.WorkBenches, TileID.Anvils, TileID.MythrilAnvil };
 
             // Dust type when broken
             DustType = DustID.PurpleTorch;

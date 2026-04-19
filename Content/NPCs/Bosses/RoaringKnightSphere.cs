@@ -1,5 +1,6 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using System;
 using System.IO;
 using Terraria;
 using Terraria.GameContent;
@@ -26,6 +27,8 @@ namespace DeterministicChaos.Content.NPCs.Bosses
         public override void SetStaticDefaults()
         {
             Main.npcFrameCount[Type] = 1;
+            NPCID.Sets.TrailingMode[Type] = 3;
+            NPCID.Sets.TrailCacheLength[Type] = 10;
         }
 
         public override void SetDefaults()
@@ -92,6 +95,12 @@ namespace DeterministicChaos.Content.NPCs.Bosses
             {
                 if (parent != null && parent.active)
                 {
+                    if (parent.ModNPC is RoaringKnight knight && knight.IsInFinalStand)
+                    {
+                        pendingDamage = 0;
+                        return;
+                    }
+
                     parent.life -= pendingDamage;
                     if (parent.life <= 0)
                     {
@@ -103,9 +112,6 @@ namespace DeterministicChaos.Content.NPCs.Bosses
                         
                         // Also kill the sphere
                         NPC.active = false;
-                        
-                        // Disable the background
-                        RoaringKnightBackgroundSystem.ShowBackground = false;
                     }
                     parent.netUpdate = true;
                 }
@@ -137,6 +143,9 @@ namespace DeterministicChaos.Content.NPCs.Bosses
                 Color c = crit ? Color.Orange : Color.LightGoldenrodYellow;
                 CombatText.NewText(NPC.Hitbox, c, damage, crit);
             }
+
+            if (parent.ModNPC is RoaringKnight knight && knight.IsInFinalStand)
+                return;
             
             if (Main.netMode == NetmodeID.MultiplayerClient)
             {
@@ -162,9 +171,6 @@ namespace DeterministicChaos.Content.NPCs.Bosses
                     
                     // Also kill the sphere
                     NPC.active = false;
-                    
-                    // Disable the background
-                    RoaringKnightBackgroundSystem.ShowBackground = false;
                 }
                 parent.netUpdate = true;
             }
@@ -188,6 +194,11 @@ namespace DeterministicChaos.Content.NPCs.Bosses
         {
             NPC.life = 1;
             return false;
+        }
+
+        public override bool CanHitPlayer(Player target, ref int cooldownSlot)
+        {
+            return NPC.DistanceSQ(target.Center) < 20f * 20f;
         }
 
         // Handles sprite animation
@@ -234,6 +245,22 @@ namespace DeterministicChaos.Content.NPCs.Bosses
             Vector2 origin = new Vector2(FrameW * 0.5f, FrameH * 0.5f);
             Vector2 basePos = NPC.Center - screenPos;
             basePos.Y += NPC.gfxOffY;
+
+            // Draw afterimages when parent knight is dashing
+            NPC parent = Parent;
+            if (parent != null && parent.localAI[0] == 1f)
+            {
+                int trailCount = Math.Min(NPC.oldPos.Length, 8);
+                for (int i = 1; i < trailCount; i++)
+                {
+                    if (NPC.oldPos[i] == Vector2.Zero) continue;
+                    Vector2 trailPos = NPC.oldPos[i] + new Vector2(NPC.width * 0.5f, NPC.height * 0.5f) - screenPos;
+                    trailPos.Y += NPC.gfxOffY;
+                    float fade = 1f - (i / (float)trailCount);
+                    Color trailColor = Color.White * (fade * 0.45f);
+                    spriteBatch.Draw(tex, trailPos, NPC.frame, trailColor, NPC.rotation, origin, NPC.scale, SpriteEffects.None, 0f);
+                }
+            }
 
             spriteBatch.Draw(
                 tex,

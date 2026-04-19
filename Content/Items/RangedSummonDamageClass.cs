@@ -2,10 +2,6 @@ using Terraria.ModLoader;
 
 namespace DeterministicChaos.Content.Items
 {
-    /// <summary>
-    /// A hybrid damage class that benefits from both Ranged and Summoner modifiers.
-    /// Used by the HollowGun.
-    /// </summary>
     public class RangedSummonDamageClass : DamageClass
     {
         public override StatInheritanceData GetModifierInheritance(DamageClass damageClass)

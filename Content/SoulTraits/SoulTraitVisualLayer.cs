@@ -22,7 +22,7 @@ namespace DeterministicChaos.Content.SoulTraits
             
             // Only visible if player has a trait, visibility is enabled, and NOT in Dark World
             // In Dark World, the soul is drawn by the UI system to avoid being inverted
-            bool inDarkDimension = SubworldSystem.IsActive<DarkDimension>();
+            bool inDarkDimension = DarkDimension.IsInDarkWorld;
             return traitPlayer.CurrentTrait != SoulTraitType.None && traitPlayer.SoulVisible && !inDarkDimension;
         }
 
@@ -112,7 +112,7 @@ namespace DeterministicChaos.Content.SoulTraits
         public override void ModifyInterfaceLayers(List<GameInterfaceLayer> layers)
         {
             // Only draw in Dark World
-            if (!SubworldSystem.IsActive<DarkDimension>())
+            if (!DarkDimension.IsInDarkWorld)
                 return;
             
             // Find the index of the inventory layer to insert before it

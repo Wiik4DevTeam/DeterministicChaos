@@ -2,10 +2,6 @@ using Terraria.ModLoader;
 
 namespace DeterministicChaos.Content.Items
 {
-    /// <summary>
-    /// A hybrid damage class that benefits from both Melee and Magic modifiers.
-    /// Used by the Rusty Knife.
-    /// </summary>
     public class MeleeMagicDamageClass : DamageClass
     {
         public override StatInheritanceData GetModifierInheritance(DamageClass damageClass)

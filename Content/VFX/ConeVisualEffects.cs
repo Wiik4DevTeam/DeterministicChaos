@@ -2,6 +2,8 @@ using System;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Terraria;
+using Terraria.Audio;
+using Terraria.ID;
 using Terraria.ModLoader;
 
 namespace DeterministicChaos.Content.VFX
@@ -32,6 +34,14 @@ namespace DeterministicChaos.Content.VFX
 
         public override void AI()
         {
+            // Play energy charge sound on first tick (client-safe, runs when projectile syncs from server)
+            if (Projectile.localAI[0] == 0f)
+            {
+                Projectile.localAI[0] = 1f;
+                if (Main.netMode != NetmodeID.Server)
+                    SoundEngine.PlaySound(new SoundStyle("DeterministicChaos/Assets/Sounds/KnightEnergyCharge") { Volume = 0.8f }, Projectile.Center);
+            }
+
             // ai[0] = NPC index (owner)
             // ai[1] = cone angle in degrees
             

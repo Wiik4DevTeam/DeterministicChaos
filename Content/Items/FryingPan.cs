@@ -17,7 +17,7 @@ namespace DeterministicChaos.Content.Items
         {
             Item.width = 40;
             Item.height = 40;
-            Item.damage = 10;
+            Item.damage = 14;
             Item.knockBack = 50f; // Massive knockback for melee hits
             Item.useTime = 32;
             Item.useAnimation = 32;
@@ -37,7 +37,7 @@ namespace DeterministicChaos.Content.Items
         public override void SetStaticDefaults()
         {
             // Register +3 Kindness weapon investment
-            SoulTraitGlobalItem.RegisterWeaponInvestment(Type, 3);
+            SoulTraitGlobalItem.RegisterWeaponInvestment(Type, 3, SoulTraitType.Kindness);
         }
 
         public override bool MeleePrefix()
@@ -48,17 +48,12 @@ namespace DeterministicChaos.Content.Items
 
         public override bool CanUseItem(Player player)
         {
-            // Requires Kindness trait to use the egg-launching feature
+            // Requires Kindness trait to use
             var traitPlayer = player.GetModPlayer<SoulTraitPlayer>();
             if (traitPlayer.CurrentTrait != SoulTraitType.Kindness)
-            {
-                // Can still swing but won't shoot eggs
-                Item.useAmmo = AmmoID.None;
-            }
-            else
-            {
-                Item.useAmmo = AmmoID.Dart; // Seeds
-            }
+                return false;
+
+            Item.useAmmo = AmmoID.Dart; // Seeds
             return base.CanUseItem(player);
         }
 

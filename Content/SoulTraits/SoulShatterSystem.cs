@@ -64,7 +64,7 @@ namespace DeterministicChaos.Content.SoulTraits
                         dir = new Vector2(Main.rand.NextFloat(-1f, 1f), Main.rand.NextFloat(-1f, 1f));
                     dir.Normalize();
 
-                    // Fling outward — shards farther from center go faster
+                    // Fling outward, shards farther from center go faster
                     float dist = new Vector2(offsetX, offsetY).Length();
                     float speed = 2f + dist * 0.15f + Main.rand.NextFloat(0f, 2f);
                     Vector2 velocity = dir * speed + new Vector2(Main.rand.NextFloat(-0.8f, 0.8f), Main.rand.NextFloat(-3f, -1f));

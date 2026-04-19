@@ -314,8 +314,8 @@ namespace DeterministicChaos.Content.SoulTraits
             if (traitPlayer.PatienceMarkStacks > 0)
                 activeMarks.Add($"Patience Marks: {traitPlayer.PatienceMarkStacks}");
 
-            if (traitPlayer.IntegrityMarkStacks > 0)
-                activeMarks.Add($"Integrity Mark Stacks: {traitPlayer.IntegrityMarkStacks}");
+            if (traitPlayer.IntegrityMarkActive)
+                activeMarks.Add("Integrity Mark: Ready!");
 
             if (traitPlayer.PerseveranceMarkActive)
                 activeMarks.Add("Perseverance Mark: Ready!");

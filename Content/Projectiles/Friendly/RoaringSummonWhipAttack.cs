@@ -28,7 +28,7 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
         {
             Projectile.DefaultToWhip();
             Projectile.WhipSettings.Segments = 20;
-            Projectile.WhipSettings.RangeMultiplier = 1.8f; // Extended range to match main whip
+            Projectile.WhipSettings.RangeMultiplier = 2.3f; // Longer reach for summon whip attacks
             
             // Change to summon damage
             Projectile.DamageType = DamageClass.Summon;

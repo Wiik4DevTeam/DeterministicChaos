@@ -127,6 +127,14 @@ namespace DeterministicChaos.Content.Projectiles.Enemy
                 }
                 return; // Don't do anything else while delayed
             }
+
+            // Play spawn sound on first active tick (client-safe, runs when projectile syncs from server)
+            if (Projectile.localAI[0] == 0f)
+            {
+                Projectile.localAI[0] = 1f;
+                if (Main.netMode != NetmodeID.Server)
+                    SoundEngine.PlaySound(new SoundStyle("DeterministicChaos/Assets/Sounds/KnightKnifeSpawn") { Volume = 0.7f }, Projectile.Center);
+            }
             
             // Check if hasDashed just changed from false to true (on clients via sync)
             if (hasDashed && !prevHasDashed && Main.netMode != NetmodeID.Server)

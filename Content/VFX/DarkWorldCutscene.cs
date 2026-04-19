@@ -36,6 +36,23 @@ namespace DeterministicChaos.Content.VFX
         // Screen fade
         private static float screenFadeAlpha = 0f;
         
+        // Ceiling descent spheres (inverted floor-is-lava)
+        private static List<CeilingSphere> ceilingSpheres = new List<CeilingSphere>();
+        private static bool ceilingSpawned = false;
+        
+        private const float CEILING_START_TIME = 5f;        // When ceiling spheres begin descending
+        private const float CEILING_COVER_DURATION = 5f;    // Seconds to fully cover the screen
+        private const int CEILING_COLS = 10;                 // Spheres per row
+        private const int CEILING_ROWS = 14;                 // Total rows (enough to cover + overflow)
+        
+        private struct CeilingSphere
+        {
+            public int SphereId;
+            public float ScreenOffsetX;    // Fixed horizontal offset from screen left
+            public float ScreenOffsetY;    // Relative to descent line (row baseline)
+            public float Size;
+        }
+        
         // Camera effects
         private static float originalZoom = 1f;
         private static float targetZoom = 1.15f;
@@ -117,12 +134,14 @@ namespace DeterministicChaos.Content.VFX
             shockwaveSpawnTimer = 0f;
             mainOvalId = -1;
             screenFadeAlpha = 0f;
+            ceilingSpawned = false;
             
             // Save original zoom
             originalZoom = Main.GameZoomTarget;
             
             activeStars.Clear();
             smokeSpheres.Clear();
+            ceilingSpheres.Clear();
             BlackSphereSystem.ClearAll();
             
             // Play the opening sound
@@ -157,6 +176,9 @@ namespace DeterministicChaos.Content.VFX
             
             // Update smoke spheres
             UpdateSmokeSpheres(deltaTime);
+            
+            // Update ceiling descent spheres
+            UpdateCeilingSpheres(deltaTime);
             
             // Calculate interior color (white -> black transition)
             UpdateSphereColors();
@@ -309,6 +331,98 @@ namespace DeterministicChaos.Content.VFX
             }
         }
 
+        private void UpdateCeilingSpheres(float deltaTime)
+        {
+            if (cutsceneTimer < CEILING_START_TIME)
+                return;
+
+            // Spawn all ceiling spheres at once on the first frame
+            if (!ceilingSpawned)
+            {
+                ceilingSpawned = true;
+                SpawnAllCeilingSpheres();
+            }
+
+            // All spheres descend together as a uniform curtain
+            // Progress: 0 = just started, 1 = screen fully covered
+            float elapsed = cutsceneTimer - CEILING_START_TIME;
+            float progress = MathHelper.Clamp(elapsed / CEILING_COVER_DURATION, 0f, 1f);
+
+            // Ease-in: starts slow, accelerates (quadratic)
+            float easedProgress = progress * progress;
+
+            // The curtain line descends from above the screen to below it
+            // At progress=0, ALL rows must be above screen. At progress=1, bottom rows are below screen.
+            float screenH = Main.screenHeight / Main.GameZoomTarget;
+            float sphereSize = GetCeilingSphereSize();
+            float rowSpacing = sphereSize * 0.7f;
+            float totalGridHeight = (CEILING_ROWS - 1) * rowSpacing + sphereSize; // Full height of all rows
+            float startY = Main.screenPosition.Y - totalGridHeight - sphereSize; // Start entirely above screen
+            float endY = Main.screenPosition.Y + screenH; // End below bottom of screen
+            float curtainY = MathHelper.Lerp(startY, endY, easedProgress);
+
+            // Update each sphere: fixed screen X, row offset from curtain line
+            for (int i = 0; i < ceilingSpheres.Count; i++)
+            {
+                var cs = ceilingSpheres[i];
+
+                // World position: track camera X + fixed offset, curtain Y + row offset
+                Vector2 worldPos = new Vector2(
+                    Main.screenPosition.X + cs.ScreenOffsetX,
+                    curtainY + cs.ScreenOffsetY);
+
+                BlackSphereSystem.UpdateSphere(cs.SphereId,
+                    position: worldPos,
+                    width: cs.Size,
+                    height: cs.Size);
+            }
+        }
+
+        private float GetCeilingSphereSize()
+        {
+            float screenW = Main.screenWidth / Main.GameZoomTarget;
+            return screenW / (CEILING_COLS - 1) * 1.4f;
+        }
+
+        private void SpawnAllCeilingSpheres()
+        {
+            float screenW = Main.screenWidth / Main.GameZoomTarget;
+            float sphereSize = GetCeilingSphereSize();
+            float rowSpacing = sphereSize * 0.7f; // Rows overlap vertically
+
+            for (int row = 0; row < CEILING_ROWS; row++)
+            {
+                float rowY = row * rowSpacing;
+
+                for (int col = 0; col < CEILING_COLS; col++)
+                {
+                    float colFrac = col / (float)(CEILING_COLS - 1);
+                    // Offset every other row by half a column for tighter packing
+                    float stagger = (row % 2 == 1) ? sphereSize * 0.35f : 0f;
+                    float screenX = -sphereSize * 0.5f + colFrac * (screenW + sphereSize) + stagger;
+
+                    // Small jitter so it's not perfectly gridded
+                    float jitterX = Main.rand.NextFloat(-8f, 8f);
+                    float jitterY = Main.rand.NextFloat(-8f, 8f);
+
+                    // Start off-screen above; spawn at world pos (will be repositioned each frame)
+                    Vector2 spawnPos = new Vector2(
+                        Main.screenPosition.X + screenX + jitterX,
+                        Main.screenPosition.Y - sphereSize * 2f);
+
+                    int id = BlackSphereSystem.AddSphere(spawnPos, sphereSize, sphereSize);
+
+                    ceilingSpheres.Add(new CeilingSphere
+                    {
+                        SphereId = id,
+                        ScreenOffsetX = screenX + jitterX,
+                        ScreenOffsetY = rowY + jitterY,
+                        Size = sphereSize
+                    });
+                }
+            }
+        }
+
         private void UpdateSphereColors()
         {
             // Calculate the interior color based on cutscene progress
@@ -447,6 +561,7 @@ namespace DeterministicChaos.Content.VFX
             BlackSphereSystem.ClearAll();
             activeStars.Clear();
             smokeSpheres.Clear();
+            ceilingSpheres.Clear();
             
             // Teleport nearby players to Dark World
             for (int i = 0; i < Main.maxPlayers; i++)
@@ -464,7 +579,7 @@ namespace DeterministicChaos.Content.VFX
                     DarkDimension.WorldSeed = Main.rand.Next();
                     
                     // Enter the Dark World
-                    SubworldSystem.Enter<DarkDimension>();
+                    DarkDimension.EnterBiome(DarkDimension.SourceBiome);
                     break;
                 }
             }

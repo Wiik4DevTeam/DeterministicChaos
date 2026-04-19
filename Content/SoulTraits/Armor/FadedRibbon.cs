@@ -1,6 +1,7 @@
 using Microsoft.Xna.Framework;
 using Terraria;
 using Terraria.ID;
+using Terraria.DataStructures;
 using Terraria.ModLoader;
 
 namespace DeterministicChaos.Content.SoulTraits.Armor
@@ -69,18 +70,59 @@ namespace DeterministicChaos.Content.SoulTraits.Armor
     public class FadedRibbonPlayer : ModPlayer
     {
         public bool hasFadedRibbon;
+        public bool hasCuteBow;
+
+        // Life regen bonus thresholds for CuteBow
+        private const float RegenHealthThreshold = 0.75f; // Must be at 75%+ HP
+        private const int MaxRegenBonus = 30; // Max life regen bonus at full health
+        private const int MinRegenBonus = 6;  // Min life regen bonus at 75% health
 
         public override void ResetEffects()
         {
             hasFadedRibbon = false;
+            hasCuteBow = false;
+        }
+
+        public override void UpdateLifeRegen()
+        {
+            if (hasCuteBow && Player.GetModPlayer<SoulTraitPlayer>().CurrentTrait == SoulTraitType.Patience)
+            {
+                float healthPercent = (float)Player.statLife / Player.statLifeMax2;
+
+                if (healthPercent >= RegenHealthThreshold)
+                {
+                    // Scale regen bonus from MinRegenBonus at 75% to MaxRegenBonus at 100%
+                    float t = (healthPercent - RegenHealthThreshold) / (1f - RegenHealthThreshold);
+                    int regenBonus = (int)(MinRegenBonus + t * (MaxRegenBonus - MinRegenBonus));
+                    Player.lifeRegen += regenBonus;
+
+                    // Cyan sparkle particles when regen is active
+                    if (Main.rand.NextBool(8))
+                    {
+                        Dust dust = Dust.NewDustDirect(Player.position, Player.width, Player.height, DustID.IceTorch, 0f, -1f);
+                        dust.noGravity = true;
+                        dust.scale = 0.8f + t * 0.6f;
+                        dust.velocity *= 0.3f;
+                        dust.color = new Color(0, 255, 255);
+                    }
+                }
+            }
         }
 
         public override void ModifyHurt(ref Player.HurtModifiers modifiers)
         {
             if (hasFadedRibbon && Player.statLife >= Player.statLifeMax2 && Player.GetModPlayer<SoulTraitPlayer>().CurrentTrait == SoulTraitType.Patience)
             {
-                // Take 30% less damage while at max health
-                modifiers.FinalDamage *= 0.70f;
+                if (hasCuteBow)
+                {
+                    // Take 50% less damage while at max health (upgraded)
+                    modifiers.FinalDamage *= 0.50f;
+                }
+                else
+                {
+                    // Take 30% less damage while at max health
+                    modifiers.FinalDamage *= 0.70f;
+                }
             }
         }
     }

@@ -16,6 +16,9 @@ namespace DeterministicChaos.Content.VFX
         private static float scrollOffset = 0f;
         private static float colorHue = 0f;
         
+        // Set to true to hide the normal fountain visual (e.g. during Titan spawn).
+        public static bool HideFountain = false;
+        
         // Trail particles
         private static List<FountainParticle> particles = new List<FountainParticle>();
         private const int MaxParticles = 100;
@@ -32,7 +35,7 @@ namespace DeterministicChaos.Content.VFX
 
         public override void PostUpdateEverything()
         {
-            if (!SubworldSystem.IsActive<DarkDimension>() || Main.dedServ)
+            if (!DarkDimension.IsInDarkWorld || Main.dedServ || HideFountain)
                 return;
 
             // Scroll upward
@@ -111,7 +114,7 @@ namespace DeterministicChaos.Content.VFX
         {
             orig(self);
             
-            if (!SubworldSystem.IsActive<DarkDimension>() || Main.dedServ)
+            if (!DarkDimension.IsInDarkWorld || Main.dedServ || HideFountain)
                 return;
                 
             if (DarkPortal.PortalX < 0)

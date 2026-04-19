@@ -125,6 +125,8 @@ namespace DeterministicChaos.Content.Systems
                 // Only enter the subworld if this is the player who activated it
                 if (targetPlayerIndex >= 0 && targetPlayerIndex == Main.myPlayer)
                 {
+                    DarkDimension.CacheCalamityDifficulty();
+                    ERAMProgressSystem.IsTransitioningSubworld = true;
                     SubworldSystem.Enter<ERAMArena>();
                 }
                 

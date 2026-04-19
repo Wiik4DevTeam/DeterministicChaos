@@ -64,11 +64,13 @@ namespace DeterministicChaos.Content.SoulTraits.Armor
     public class ManlyBandanaPlayer : ModPlayer
     {
         public bool hasManlyBandana;
+        public bool hasBurningBandana;
         public float currentDamageBonus;
 
         public override void ResetEffects()
         {
             hasManlyBandana = false;
+            hasBurningBandana = false;
             currentDamageBonus = 0f;
         }
 
@@ -82,18 +84,29 @@ namespace DeterministicChaos.Content.SoulTraits.Armor
                 // Max velocity for full bonus (about running speed with boots)
                 const float maxVelocity = 16f;
                 
-                // Scale damage bonus from 0 to 10% based on velocity
+                // Scale damage bonus based on velocity
+                // ManlyBandana: 0-10%, BurningBandana: 0-20%
+                float maxBonus = hasBurningBandana ? 0.20f : 0.10f;
                 float velocityPercent = Math.Min(velocity / maxVelocity, 1f);
-                currentDamageBonus = 0.10f * velocityPercent;
+                currentDamageBonus = maxBonus * velocityPercent;
                 
                 Player.GetDamage(DamageClass.Generic) += currentDamageBonus;
                 
                 // Visual trail effect when moving fast
                 if (velocityPercent > 0.5f && Main.rand.NextBool(3))
                 {
-                    Dust dust = Dust.NewDustDirect(Player.position, Player.width, Player.height, DustID.Torch, 0f, 0f, 100, default, 0.8f * velocityPercent);
+                    int dustType = hasBurningBandana ? DustID.Torch : DustID.Torch;
+                    float dustScale = hasBurningBandana ? 1.2f * velocityPercent : 0.8f * velocityPercent;
+                    Dust dust = Dust.NewDustDirect(Player.position, Player.width, Player.height, dustType, 0f, 0f, 100, default, dustScale);
                     dust.noGravity = true;
                     dust.velocity *= 0.3f;
+
+                    // Extra fire particles for burning bandana
+                    if (hasBurningBandana && Main.rand.NextBool(2))
+                    {
+                        Dust fireDust = Dust.NewDustDirect(Player.position, Player.width, Player.height, DustID.FlameBurst, -Player.velocity.X * 0.2f, -Player.velocity.Y * 0.2f, 100, default, 1f);
+                        fireDust.noGravity = true;
+                    }
                 }
             }
         }

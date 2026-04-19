@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Terraria;
+using Terraria.Audio;
 using Terraria.DataStructures;
 using Terraria.GameContent.Achievements;
 using Terraria.ID;
@@ -21,7 +22,8 @@ namespace DeterministicChaos.Content.SoulTraits
         public int ArmorInvestment = 0;
         public int WeaponInvestment = 0;
         public int PotionInvestment = 0;
-        public int TotalInvestment => Math.Min(ArmorInvestment + WeaponInvestment + PotionInvestment, 20);
+        public int BonusInvestment = 0;
+        public int TotalInvestment => Math.Min(ArmorInvestment + WeaponInvestment + PotionInvestment + BonusInvestment, 20);
 
         // Mark stacks for each trait
         public int JusticeHitCounter = 0;
@@ -37,7 +39,7 @@ namespace DeterministicChaos.Content.SoulTraits
         public int PatienceNoDamageTimer = 0;
         public const int PatienceMarkInterval = 1800;
 
-        public int IntegrityMarkStacks = 0;
+        public bool IntegrityMarkActive = false;
 
         public bool PerseveranceMarkActive = false;
 
@@ -53,9 +55,9 @@ namespace DeterministicChaos.Content.SoulTraits
         public int BraveryDamageTimer = 0;
         public const int BraveryDamageDuration = 360;
 
-        public int PerseveranceDamageStacks = 0;
-        public int PerseveranceDamageTimer = 0;
-        public const int PerseveranceDamageDuration = 300;
+        public int IntegrityDamageStacks = 0;
+        public int IntegrityDamageTimer = 0;
+        public const int IntegrityDamageDuration = 300;
 
         public int CombatTimer = 0;
         public const int CombatDuration = 300;
@@ -76,14 +78,14 @@ namespace DeterministicChaos.Content.SoulTraits
             BraveryMarkTimer = 0;
             PatienceMarkStacks = 0;
             PatienceNoDamageTimer = 0;
-            IntegrityMarkStacks = 0;
+            IntegrityMarkActive = false;
             PerseveranceMarkActive = false;
             DeterminationMarkActive = false;
             DeterminationCooldown = 0;
             KindnessDefenseTimer = 0;
             BraveryDamageTimer = 0;
-            PerseveranceDamageStacks = 0;
-            PerseveranceDamageTimer = 0;
+            IntegrityDamageStacks = 0;
+            IntegrityDamageTimer = 0;
             CombatTimer = 0;
         }
 
@@ -92,6 +94,7 @@ namespace DeterministicChaos.Content.SoulTraits
             tag["SoulTrait"] = (int)CurrentTrait;
             tag["TraitLocked"] = TraitLocked;
             tag["SoulVisible"] = SoulVisible;
+            tag["BonusInvestment"] = BonusInvestment;
             tag["PatienceMarkStacks"] = PatienceMarkStacks;
             tag["DeterminationCooldown"] = DeterminationCooldown;
             if (DeterminationMarkActive)
@@ -107,6 +110,7 @@ namespace DeterministicChaos.Content.SoulTraits
             CurrentTrait = (SoulTraitType)tag.GetInt("SoulTrait");
             TraitLocked = tag.GetBool("TraitLocked");
             SoulVisible = tag.GetBool("SoulVisible");
+            BonusInvestment = tag.GetInt("BonusInvestment");
             PatienceMarkStacks = tag.GetInt("PatienceMarkStacks");
             DeterminationCooldown = tag.GetInt("DeterminationCooldown");
             DeterminationMarkActive = tag.GetBool("DeterminationMarkActive");
@@ -125,10 +129,15 @@ namespace DeterministicChaos.Content.SoulTraits
 
         public override void PreUpdate()
         {
-            // Check if hardmode started and lock trait
+            // Lock trait when entering hardmode, unlock when in pre-hardmode
             if (Main.hardMode && !TraitLocked && CurrentTrait != SoulTraitType.None)
             {
                 TraitLocked = true;
+            }
+            else if (!Main.hardMode && TraitLocked)
+            {
+                // Unlock trait if world is not in hardmode (e.g., joined a new pre-hardmode world)
+                TraitLocked = false;
             }
         }
 
@@ -136,6 +145,15 @@ namespace DeterministicChaos.Content.SoulTraits
         {
             if (CurrentTrait == SoulTraitType.None)
                 return;
+
+            // Apply weapon investment early, HoldItem runs after PostUpdateEquips,
+            // so we need to grab it here for trait effects like extra jumps to work.
+            // Only grant weapon investment if the weapon's required trait matches the player's trait.
+            SoulTraitType requiredTrait = SoulTraitGlobalItem.GetWeaponTraitRequirement(Player.HeldItem.type);
+            if (requiredTrait == SoulTraitType.None || requiredTrait == CurrentTrait)
+            {
+                WeaponInvestment = SoulTraitGlobalItem.GetWeaponInvestment(Player.HeldItem.type);
+            }
 
             int investment = TotalInvestment;
 
@@ -147,6 +165,18 @@ namespace DeterministicChaos.Content.SoulTraits
         {
             UpdateTimers();
             UpdateBuffIcons();
+        }
+
+        public override void NaturalLifeRegen(ref float regen)
+        {
+            // Patience 5 Investment: Double life regen while not moving
+            if (CurrentTrait == SoulTraitType.Patience && TotalInvestment >= 5)
+            {
+                if (Player.velocity.Length() < 0.1f)
+                {
+                    regen *= 2f;
+                }
+            }
         }
 
         private void UpdateBuffIcons()
@@ -175,17 +205,17 @@ namespace DeterministicChaos.Content.SoulTraits
             if (PatienceMarkStacks > 0)
                 Player.AddBuff(ModContent.BuffType<PatienceMarkBuff>(), 2);
 
-            // Integrity Mark (stacks)
-            if (IntegrityMarkStacks > 0)
+            // Integrity Mark
+            if (IntegrityMarkActive)
                 Player.AddBuff(ModContent.BuffType<IntegrityMarkBuff>(), 2);
 
             // Perseverance Mark
             if (PerseveranceMarkActive)
                 Player.AddBuff(ModContent.BuffType<PerseveranceMarkBuff>(), 2);
 
-            // Perseverance Damage (stacks)
-            if (PerseveranceDamageStacks > 0 && PerseveranceDamageTimer > 0)
-                Player.AddBuff(ModContent.BuffType<PerseveranceDamageBuff>(), PerseveranceDamageTimer);
+            // Integrity Damage (stacks)
+            if (IntegrityDamageStacks > 0 && IntegrityDamageTimer > 0)
+                Player.AddBuff(ModContent.BuffType<IntegrityDamageBuff>(), IntegrityDamageTimer);
 
             // Determination Mark
             if (DeterminationMarkActive)
@@ -216,12 +246,12 @@ namespace DeterministicChaos.Content.SoulTraits
             else
                 BraveryMarkActive = false;
 
-            // Perseverance damage timer
-            if (PerseveranceDamageTimer > 0)
+            // Integrity damage timer
+            if (IntegrityDamageTimer > 0)
             {
-                PerseveranceDamageTimer--;
-                if (PerseveranceDamageTimer <= 0)
-                    PerseveranceDamageStacks = 0;
+                IntegrityDamageTimer--;
+                if (IntegrityDamageTimer <= 0)
+                    IntegrityDamageStacks = 0;
             }
 
             // Kindness mark timer
@@ -243,6 +273,20 @@ namespace DeterministicChaos.Content.SoulTraits
                 }
             }
 
+            // Perseverance mark activation at full health
+            if (CurrentTrait == SoulTraitType.Perseverance && TotalInvestment >= 20)
+            {
+                if (Player.statLife >= Player.statLifeMax2 && Player.statMana > 0 && !PerseveranceMarkActive)
+                {
+                    PerseveranceMarkActive = true;
+                }
+                // Deactivate mark if no longer at full health or no mana
+                else if (PerseveranceMarkActive && (Player.statLife < Player.statLifeMax2 || Player.statMana <= 0))
+                {
+                    PerseveranceMarkActive = false;
+                }
+            }
+
             // Determination mark activation at 50% health
             if (CurrentTrait == SoulTraitType.Determination && TotalInvestment >= 20 && DeterminationCooldown <= 0)
             {
@@ -250,7 +294,23 @@ namespace DeterministicChaos.Content.SoulTraits
                 {
                     DeterminationMarkActive = true;
                     DeterminationSavedPosition = Player.Center;
+
+                    // Play save sound when the star appears
+                    SoundEngine.PlaySound(new SoundStyle($"{nameof(DeterministicChaos)}/Assets/Sounds/PlayerSave"), DeterminationSavedPosition);
                 }
+            }
+
+            // Deactivate all self-targeted marks if investment drops below 20
+            if (TotalInvestment < 20)
+            {
+                JusticeMarkActive = false;
+                BraveryMarkActive = false;
+                BraveryMarkTimer = 0;
+                PatienceMarkStacks = 0;
+                PatienceNoDamageTimer = 0;
+                IntegrityMarkActive = false;
+                PerseveranceMarkActive = false;
+                DeterminationMarkActive = false;
             }
         }
 
@@ -380,14 +440,8 @@ namespace DeterministicChaos.Content.SoulTraits
                 Player.aggro -= 400;
             }
 
-            // 5 Investment: Double life regen while not moving
-            if (investment >= 5)
-            {
-                if (Player.velocity.Length() < 0.1f)
-                {
-                    Player.lifeRegen += Player.lifeRegen;
-                }
-            }
+            // 5 Investment: Double life regen while not moving (handled in NaturalLifeRegen hook)
+            // This space intentionally left for reference
 
             // 12 Investment: Stealth mode via Calamity's rogue stealth system
             if (investment >= 12)
@@ -399,59 +453,43 @@ namespace DeterministicChaos.Content.SoulTraits
         private void ApplyCalamityStealth()
         {
             // Use Calamity's rogue stealth system via reflection
-            // CalamityPlayer is not directly accessible, so we use ModPlayer lookup
-            if (ModLoader.TryGetMod("CalamityMod", out Mod calamity))
+            if (!ModLoader.TryGetMod("CalamityMod", out Mod calamity))
+                return;
+
+            foreach (var modPlayer in Player.ModPlayers)
             {
-                foreach (var modPlayer in Player.ModPlayers)
+                if (modPlayer.GetType().Name != "CalamityPlayer")
+                    continue;
+
+                var type = modPlayer.GetType();
+
+                // Enable rogue armor flag, required for the stealth meter to appear
+                var wearingRogueArmor = type.GetField("wearingRogueArmor");
+                wearingRogueArmor?.SetValue(modPlayer, true);
+
+                // Set stealth capacity
+                var rogueStealthMaxField = type.GetField("rogueStealthMax");
+                if (rogueStealthMaxField != null)
                 {
-                    if (modPlayer.GetType().FullName == "CalamityMod.CalPlayer.CalamityPlayer")
-                    {
-                        var type = modPlayer.GetType();
-                        var rogueStealthMaxField = type.GetField("rogueStealthMax");
-                        
-                        if (rogueStealthMaxField != null)
-                        {
-                            float currentMax = (float)rogueStealthMaxField.GetValue(modPlayer);
-                            
-                            if (currentMax <= 0)
-                            {
-                                // Grant base stealth capacity
-                                rogueStealthMaxField.SetValue(modPlayer, 1.0f);
-                            }
-                            else
-                            {
-                                // Add 30% more stealth capacity
-                                rogueStealthMaxField.SetValue(modPlayer, currentMax + 0.3f);
-                            }
-                        }
-                        break;
-                    }
+                    float currentMax = (float)rogueStealthMaxField.GetValue(modPlayer);
+                    if (currentMax <= 0f)
+                        rogueStealthMaxField.SetValue(modPlayer, 1.0f);
+                    else
+                        rogueStealthMaxField.SetValue(modPlayer, currentMax + 0.3f);
                 }
+
+                // Set stealth generation rates so stealth actually regenerates
+                var stealthGenStandstill = type.GetField("stealthGenStandstill");
+                stealthGenStandstill?.SetValue(modPlayer, 0.5f);
+
+                var stealthGenMoving = type.GetField("stealthGenMoving");
+                stealthGenMoving?.SetValue(modPlayer, 0.25f);
+
+                break;
             }
         }
 
         private void ApplyIntegrityEffects(int investment)
-        {
-            bool removeNegatives = investment >= 12;
-
-            // 3 Investment: +15% crit damage, -10% crit chance
-            if (investment >= 3)
-            {
-                Player.GetCritChance(DamageClass.Generic) -= removeNegatives ? 0 : 10;
-            }
-
-            // 5 Investment: +15% attack speed, -10% damage
-            if (investment >= 5)
-            {
-                Player.GetAttackSpeed(DamageClass.Generic) += 0.15f;
-                if (!removeNegatives)
-                {
-                    Player.GetDamage(DamageClass.Generic) -= 0.10f;
-                }
-            }
-        }
-
-        private void ApplyPerseveranceEffects(int investment)
         {
             bool removeNegatives = investment >= 12;
 
@@ -466,10 +504,40 @@ namespace DeterministicChaos.Content.SoulTraits
             }
 
             // 5 Investment: Damage boost stacks after taking damage
-            if (investment >= 5 && PerseveranceDamageStacks > 0)
+            if (investment >= 5 && IntegrityDamageStacks > 0)
             {
-                Player.GetDamage(DamageClass.Generic) += 0.05f * PerseveranceDamageStacks;
+                Player.GetDamage(DamageClass.Generic) += 0.05f * IntegrityDamageStacks;
             }
+        }
+
+        private void ApplyPerseveranceEffects(int investment)
+        {
+            // 3 Investment: Health/mana pickups grant the other's effect (handled in SoulTraitGlobalItem.OnPickup)
+
+            // 5 Investment: +1% damage per buff/debuff on player
+            if (investment >= 5)
+            {
+                int buffCount = 0;
+                for (int i = 0; i < Player.MaxBuffs; i++)
+                {
+                    if (Player.buffType[i] > 0 && Player.buffTime[i] > 0)
+                        buffCount++;
+                }
+                Player.GetDamage(DamageClass.Generic) += 0.01f * buffCount;
+            }
+
+            // 12 Investment: Up to +50 max health from mana ratio, +50 max mana from health ratio
+            if (investment >= 12)
+            {
+                float manaRatio = Player.statManaMax2 > 0 ? (float)Player.statMana / Player.statManaMax2 : 0f;
+                float healthRatio = Player.statLifeMax2 > 0 ? (float)Player.statLife / Player.statLifeMax2 : 0f;
+
+                Player.statLifeMax2 += (int)(50 * manaRatio);
+                Player.statManaMax2 += (int)(50 * healthRatio);
+            }
+
+            // 20 Investment: At full health, gain Perseverance Mark (handled in UpdateTimers)
+            // Next hit deals 50% less damage + depletes mana (handled in ModifyHurt)
         }
 
         private void ApplyDeterminationEffects(int investment)
@@ -503,7 +571,7 @@ namespace DeterministicChaos.Content.SoulTraits
 
         public override void Kill(double damage, int hitDirection, bool pvp, PlayerDeathReason damageSource)
         {
-            // Spawn soul shatter effect — the soul breaks into shards of glass
+            // Spawn soul shatter effect, the soul breaks into shards of glass
             if (CurrentTrait != SoulTraitType.None && SoulVisible)
             {
                 float bobOffset = (float)System.Math.Sin(Main.GameUpdateCount * 0.05f) * 3f;
@@ -523,6 +591,18 @@ namespace DeterministicChaos.Content.SoulTraits
                 Player.Center = DeterminationSavedPosition;
                 Player.immune = true;
                 Player.immuneTime = 120;
+
+                // Yellow flash burst at the save location
+                for (int i = 0; i < 30; i++)
+                {
+                    Dust dust = Dust.NewDustDirect(DeterminationSavedPosition - new Vector2(16, 16), 32, 32, DustID.GoldFlame);
+                    dust.velocity = Main.rand.NextVector2Circular(6f, 6f);
+                    dust.noGravity = true;
+                    dust.scale = Main.rand.NextFloat(1.5f, 2.5f);
+                }
+
+                // Play the PlayerLoad sound
+                SoundEngine.PlaySound(new SoundStyle($"{nameof(DeterministicChaos)}/Assets/Sounds/PlayerLoad"), DeterminationSavedPosition);
 
                 return false;
             }
@@ -573,18 +653,20 @@ namespace DeterministicChaos.Content.SoulTraits
                 BraveryDamageTimer = BraveryDamageDuration;
             }
 
-            // Perseverance 5 Investment: Stack damage boost (matching soul only)
-            if (CurrentTrait == SoulTraitType.Perseverance && TotalInvestment >= 5)
+            // Integrity 5 Investment: Stack damage boost (matching soul only)
+            if (CurrentTrait == SoulTraitType.Integrity && TotalInvestment >= 5)
             {
-                PerseveranceDamageStacks = Math.Min(PerseveranceDamageStacks + 1, 5);
-                PerseveranceDamageTimer = PerseveranceDamageDuration;
+                IntegrityDamageStacks = Math.Min(IntegrityDamageStacks + 1, 5);
+                IntegrityDamageTimer = IntegrityDamageDuration;
             }
 
-            // Perseverance 20 Investment: Gain mark (matching soul only)
-            if (CurrentTrait == SoulTraitType.Perseverance && TotalInvestment >= 20)
+            // Integrity 20 Investment: Gain mark (matching soul only)
+            if (CurrentTrait == SoulTraitType.Integrity && TotalInvestment >= 20)
             {
-                PerseveranceMarkActive = true;
+                IntegrityMarkActive = true;
             }
+
+            // Perseverance 20 Investment: Mark consumed on hurt (handled in ModifyHurt)
         }
 
         public override void ModifyHurt(ref Player.HurtModifiers modifiers)
@@ -600,6 +682,15 @@ namespace DeterministicChaos.Content.SoulTraits
             {
                 PatienceMarkStacks--;
                 modifiers.FinalDamage *= 0.5f;
+            }
+
+            // Perseverance 20 Investment: Consume mark to reduce damage by 50% and deplete mana
+            if (CurrentTrait == SoulTraitType.Perseverance && TotalInvestment >= 20 && PerseveranceMarkActive)
+            {
+                PerseveranceMarkActive = false;
+                modifiers.FinalDamage *= 0.5f;
+                Player.statMana = 0;
+                Player.manaRegenDelay = 300; // 5 second mana regen delay
             }
         }
 
@@ -630,23 +721,11 @@ namespace DeterministicChaos.Content.SoulTraits
                 }
             }
 
-            // Integrity 3 Investment: +15% crit damage (matching soul only)
-            if (CurrentTrait == SoulTraitType.Integrity && TotalInvestment >= 3)
+            // Integrity 20 Investment: Add defense as flat damage on next hit (matching soul only)
+            if (CurrentTrait == SoulTraitType.Integrity && TotalInvestment >= 20 && IntegrityMarkActive)
             {
-                modifiers.CritDamage += 0.15f;
-            }
-
-            // Integrity 20 Investment: Integrity Mark increases next crit damage (matching soul only)
-            if (CurrentTrait == SoulTraitType.Integrity && TotalInvestment >= 20 && IntegrityMarkStacks > 0)
-            {
-                modifiers.CritDamage += 0.25f * IntegrityMarkStacks;
-            }
-
-            // Perseverance 20 Investment: Add defense to armor penetration (matching soul only)
-            if (CurrentTrait == SoulTraitType.Perseverance && TotalInvestment >= 20 && PerseveranceMarkActive)
-            {
-                modifiers.ArmorPenetration += Player.statDefense;
-                PerseveranceMarkActive = false;
+                modifiers.FlatBonusDamage += Player.statDefense;
+                IntegrityMarkActive = false;
             }
 
             // Kindness 20 Investment: Damage boost from mark (all souls can benefit)
@@ -680,19 +759,6 @@ namespace DeterministicChaos.Content.SoulTraits
             {
                 BraveryMarkActive = true;
                 BraveryMarkTimer = 300;
-            }
-
-            // Integrity 20 Investment: Build mark stacks (matching soul only)
-            if (CurrentTrait == SoulTraitType.Integrity && TotalInvestment >= 20)
-            {
-                if (hit.Crit)
-                {
-                    IntegrityMarkStacks = 0;
-                }
-                else
-                {
-                    IntegrityMarkStacks = Math.Min(IntegrityMarkStacks + 1, 3);
-                }
             }
         }
 

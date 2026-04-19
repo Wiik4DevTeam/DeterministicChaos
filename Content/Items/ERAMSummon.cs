@@ -43,24 +43,16 @@ namespace DeterministicChaos.Content.Items
             if (SubworldSystem.IsActive<ERAMArena>() || ERAMTransitionSystem.IsTransitioning)
                 return false;
             
-            // In multiplayer, check if someone else is already in the arena
-            if (Main.netMode != NetmodeID.SinglePlayer && ERAMArena.currentArenaPlayer >= 0)
-            {
-                // Someone is already in the arena
-                Main.NewText("Another player is currently in the ERAM Arena. Please wait.", Microsoft.Xna.Framework.Color.Yellow);
-                return false;
-            }
-            
             return true;
         }
 
         public override bool? UseItem(Player player)
         {
-            // Mark this player as the one entering the arena
-            ERAMArena.currentArenaPlayer = player.whoAmI;
-            
-            // Start the transition effect, the system will handle teleporting after the effect completes
-            ERAMTransitionSystem.StartTransition(player.whoAmI);
+            // Only start the visual/sound transition on the local client of the player who used it
+            if (player.whoAmI == Main.myPlayer)
+            {
+                ERAMTransitionSystem.StartTransition(player.whoAmI);
+            }
             return true;
         }
     }

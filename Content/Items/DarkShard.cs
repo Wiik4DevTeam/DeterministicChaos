@@ -79,9 +79,14 @@ namespace DeterministicChaos.Content.Items
         {
             if (player.altFunctionUse == 2)
             {
-                // Special action: Dark Fountain
-                // Can not use if already in Dark World or cutscene is playing
-                return !SubworldSystem.IsActive<DarkDimension>() && !DarkWorldCutscene.IsPlaying;
+                // Inside Dark World: start Titan spawn event
+                if (DarkDimension.IsInDarkWorld)
+                {
+                    return !TitanSpawnCutscene.IsActive;
+                }
+                
+                // Outside Dark World: open Dark Fountain portal
+                return !DarkWorldCutscene.IsPlaying;
             }
 
             // Normal throw attack
@@ -92,6 +97,13 @@ namespace DeterministicChaos.Content.Items
         {
             if (player.altFunctionUse == 2)
             {
+                if (DarkDimension.IsInDarkWorld)
+                {
+                    // Start Titan spawn cutscene inside the Dark World
+                    TitanSpawnCutscene.StartCutscene();
+                    return true;
+                }
+                
                 // Special action: Enter Dark World
                 ActivateDarkWorldPortal(player);
                 return true;
@@ -260,17 +272,9 @@ namespace DeterministicChaos.Content.Items
 
         public override void ModifyTooltips(System.Collections.Generic.List<TooltipLine> tooltips)
         {
-            Color statGray = new Color(60, 60, 60);
             foreach (TooltipLine line in tooltips)
             {
-                // Stats get a GRAYER color to differentiate from descriptions
-                if (line.Name == "Damage" || line.Name == "Speed" || line.Name == "Knockback" || 
-                    line.Name == "CritChance" || line.Name == "Defense" || line.Name == "UseMana" ||
-                    line.Name == "Consumable" || line.Name == "Material")
-                {
-                    line.OverrideColor = statGray;
-                }
-                else
+                if (line.Name == "ItemName")
                 {
                     line.OverrideColor = Color.Black;
                 }
@@ -279,6 +283,9 @@ namespace DeterministicChaos.Content.Items
 
         public override bool PreDrawTooltipLine(DrawableTooltipLine line, ref int yOffset)
         {
+            if (line.Name != "ItemName")
+                return true;
+
             Vector2 position = new Vector2(line.X, line.Y);
 
             // Draw white shadow outline

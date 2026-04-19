@@ -15,7 +15,6 @@ namespace DeterministicChaos.Content.Buffs
 
         public override void Update(NPC npc, ref int buffIndex)
         {
-            // The actual effect is handled by RoaringSwordMarkGlobalNPC
             // This buff is purely visual for the debuff icon
         }
     }

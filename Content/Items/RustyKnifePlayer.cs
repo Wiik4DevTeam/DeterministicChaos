@@ -76,7 +76,7 @@ namespace DeterministicChaos.Content.Items
 
                 if (markerProgress >= 1f)
                 {
-                    // Reached the right side — auto-fire
+                    // Reached the right side, auto-fire
                     markerProgress = 1f;
                     LockMarker();
                 }

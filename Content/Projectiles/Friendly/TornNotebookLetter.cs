@@ -62,22 +62,42 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
                     Projectile.usesLocalNPCImmunity = true;
                     Projectile.localNPCHitCooldown = 10;
                 }
+                if ((Effects & LetterEffects.Burrow) != 0)
+                {
+                    Projectile.tileCollide = false;
+                }
             }
 
             // Base scale is 2x, BIG effect makes it 3.7x
+            // localAI[1] != 0 means this is a split projectile (stays small permanently)
+            // localAI[1] > 0 = seek suppressed (timer), localAI[1] < 0 = seek allowed
+            float scaleMult = Projectile.localAI[1] != 0 ? 0.25f : 1f;
             if ((Effects & LetterEffects.Big) != 0)
             {
-                Projectile.scale = 3.7f;
+                Projectile.scale = 3.7f * scaleMult;
             }
             else
             {
-                Projectile.scale = 2f;
+                Projectile.scale = 2f * scaleMult;
             }
 
             // Seeking behavior (can be removed by piercing)
-            if ((Effects & LetterEffects.Seek) != 0)
+            // Split projectiles lose seeking for 0.5 seconds (30 ticks)
+            if ((Effects & LetterEffects.Seek) != 0 && Projectile.localAI[1] <= 0)
             {
                 SeekNearestEnemy();
+            }
+
+            // Count down seek suppression timer
+            if (Projectile.localAI[1] > 0)
+            {
+                Projectile.localAI[1]--;
+                // Re-enable friendly once the delay expires, mark as split permanently (-1)
+                if (Projectile.localAI[1] <= 0)
+                {
+                    Projectile.localAI[1] = -1f;
+                    Projectile.friendly = true;
+                }
             }
             // No gravity - letters travel in a straight line
 
@@ -174,14 +194,6 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
 
         private int GetDustType()
         {
-            if ((Effects & LetterEffects.Fire) != 0) return DustID.Torch;
-            if ((Effects & LetterEffects.Frostburn) != 0) return DustID.IceTorch;
-            if ((Effects & LetterEffects.Poison) != 0) return DustID.Poisoned;
-            if ((Effects & LetterEffects.Venom) != 0) return DustID.Venom;
-            if ((Effects & LetterEffects.Ichor) != 0) return DustID.Ichor;
-            if ((Effects & LetterEffects.Cursed) != 0) return DustID.CursedTorch;
-            if ((Effects & LetterEffects.Shadowflame) != 0) return DustID.Shadowflame;
-            if ((Effects & LetterEffects.Daybreak) != 0) return DustID.SolarFlare;
             if ((Effects & LetterEffects.Boom) != 0) return DustID.Smoke;
             if ((Effects & LetterEffects.Crit) != 0) return DustID.GoldFlame;
             return DustID.PurpleTorch;
@@ -189,13 +201,6 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
 
         private Vector3 GetLightColor()
         {
-            if ((Effects & LetterEffects.Fire) != 0) return new Vector3(1f, 0.5f, 0f);
-            if ((Effects & LetterEffects.Frostburn) != 0) return new Vector3(0f, 0.8f, 1f);
-            if ((Effects & LetterEffects.Poison) != 0) return new Vector3(0f, 0.8f, 0f);
-            if ((Effects & LetterEffects.Ichor) != 0) return new Vector3(1f, 0.8f, 0f);
-            if ((Effects & LetterEffects.Cursed) != 0) return new Vector3(0.5f, 1f, 0f);
-            if ((Effects & LetterEffects.Shadowflame) != 0) return new Vector3(0.5f, 0f, 0.8f);
-            if ((Effects & LetterEffects.Daybreak) != 0) return new Vector3(1f, 0.6f, 0f);
             if ((Effects & LetterEffects.Boom) != 0) return new Vector3(1f, 0.3f, 0f);
             if ((Effects & LetterEffects.Crit) != 0) return new Vector3(1f, 1f, 0f);
             return new Vector3(0.5f, 0f, 0.5f);
@@ -212,9 +217,6 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
 
         public override void OnHitNPC(NPC target, NPC.HitInfo hit, int damageDone)
         {
-            // Apply debuffs based on effects
-            ApplyDebuffs(target);
-
             // BOOM effect - explosion
             if ((Effects & LetterEffects.Boom) != 0)
             {
@@ -227,38 +229,58 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
                 // Remove Seek from effects
                 Projectile.ai[1] = (float)((int)Projectile.ai[1] & ~(int)LetterEffects.Seek);
             }
+
+            // SPLIT: on hit, spawn 2 smaller projectiles with 1/4 damage that inherit effects
+            if ((Effects & LetterEffects.Split) != 0)
+            {
+                SpawnSplitProjectiles(target);
+            }
         }
 
-        private void ApplyDebuffs(NPC target)
+        private void SpawnSplitProjectiles(NPC target)
         {
-            int duration = 180; // 3 seconds
+            if (Projectile.owner != Main.myPlayer)
+                return;
 
-            if ((Effects & LetterEffects.Fire) != 0)
-                target.AddBuff(BuffID.OnFire, duration);
+            // Remove Split from inherited effects to prevent infinite splitting
+            int inheritedEffects = (int)Projectile.ai[1] & ~(int)LetterEffects.Split;
+            int splitDamage = Projectile.damage / 4;
+            if (splitDamage < 1) splitDamage = 1;
 
-            if ((Effects & LetterEffects.Frostburn) != 0)
-                target.AddBuff(BuffID.Frostburn, duration);
+            // Randomized base direction away from the hit enemy
+            Vector2 awayFromEnemy = (Projectile.Center - target.Center).SafeNormalize(Vector2.UnitX);
+            float randomOffset = Main.rand.NextFloat(-MathHelper.PiOver2, MathHelper.PiOver2);
+            awayFromEnemy = awayFromEnemy.RotatedBy(randomOffset);
 
-            if ((Effects & LetterEffects.Poison) != 0)
-                target.AddBuff(BuffID.Poisoned, duration);
+            for (int i = 0; i < 2; i++)
+            {
+                // Spread in opposite directions from the randomized base
+                float angle = (i == 0 ? -1f : 1f) * MathHelper.PiOver4;
+                Vector2 splitVel = awayFromEnemy.RotatedBy(angle) * (Projectile.velocity.Length() * 0.7f);
 
-            if ((Effects & LetterEffects.Venom) != 0)
-                target.AddBuff(BuffID.Venom, duration);
+                int proj = Projectile.NewProjectile(
+                    Projectile.GetSource_OnHit(target),
+                    Projectile.Center,
+                    splitVel,
+                    Projectile.type,
+                    splitDamage,
+                    Projectile.knockBack * 0.5f,
+                    Projectile.owner,
+                    Projectile.ai[0],        // Same letter index
+                    (float)inheritedEffects   // Inherited effects minus Split
+                );
 
-            if ((Effects & LetterEffects.Ichor) != 0)
-                target.AddBuff(BuffID.Ichor, duration);
-
-            if ((Effects & LetterEffects.Cursed) != 0)
-                target.AddBuff(BuffID.CursedInferno, duration);
-
-            if ((Effects & LetterEffects.Shadowflame) != 0)
-                target.AddBuff(BuffID.ShadowFlame, duration);
-
-            if ((Effects & LetterEffects.Daybreak) != 0)
-                target.AddBuff(BuffID.Daybreak, duration);
-
-            if ((Effects & LetterEffects.Betsy) != 0)
-                target.AddBuff(BuffID.BetsysCurse, duration);
+                // Make split projectiles 1/4 size with seek suppression and hit delay
+                if (proj >= 0 && proj < Main.maxProjectiles)
+                {
+                    // localAI[1] = seek suppression timer (30 ticks = 0.5s)
+                    // Also used for 1/4 scale multiplier and hit delay
+                    Main.projectile[proj].localAI[1] = 30f;
+                    Main.projectile[proj].timeLeft = 120; // Shorter lifetime
+                    Main.projectile[proj].friendly = false; // Can't hit during suppression
+                    Main.projectile[proj].netUpdate = true;
+                }
+            }
         }
 
         private void CreateExplosion()
@@ -367,14 +389,6 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
 
         private Color GetGlowColor()
         {
-            if ((Effects & LetterEffects.Fire) != 0) return new Color(255, 150, 50, 0);
-            if ((Effects & LetterEffects.Frostburn) != 0) return new Color(100, 200, 255, 0);
-            if ((Effects & LetterEffects.Poison) != 0) return new Color(100, 255, 100, 0);
-            if ((Effects & LetterEffects.Venom) != 0) return new Color(150, 50, 200, 0);
-            if ((Effects & LetterEffects.Ichor) != 0) return new Color(255, 200, 50, 0);
-            if ((Effects & LetterEffects.Cursed) != 0) return new Color(150, 255, 50, 0);
-            if ((Effects & LetterEffects.Shadowflame) != 0) return new Color(150, 50, 200, 0);
-            if ((Effects & LetterEffects.Daybreak) != 0) return new Color(255, 180, 50, 0);
             if ((Effects & LetterEffects.Boom) != 0) return new Color(255, 100, 50, 0);
             if ((Effects & LetterEffects.Crit) != 0) return new Color(255, 255, 100, 0);
             if ((Effects & LetterEffects.Pierce) != 0) return new Color(180, 180, 255, 0);

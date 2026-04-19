@@ -1,3 +1,4 @@
+using DeterministicChaos.Content.Systems;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
@@ -17,7 +18,7 @@ namespace DeterministicChaos.Content.Projectiles.Enemy
 
         public override void SetStaticDefaults()
         {
-            ProjectileID.Sets.DrawScreenCheckFluff[Type] = 2000;
+            ProjectileID.Sets.DrawScreenCheckFluff[Type] = 4000;
         }
 
         public override void SetDefaults()
@@ -39,17 +40,12 @@ namespace DeterministicChaos.Content.Projectiles.Enemy
         {
             Projectile.localAI[0] = Projectile.Center.X;
             Projectile.localAI[1] = Projectile.Center.Y;
-            Projectile.timeLeft = TotalLife;
             Projectile.rotation = Projectile.ai[1];
+
+            Projectile.timeLeft = TotalLife;
             
             // Play indicator sound (only if not spawned by LatticeKnife)
-            if (Main.netMode != NetmodeID.Server && !(Projectile.ai[0] < 0 && Projectile.ai[2] > 1f))
-            {
-                SoundEngine.PlaySound(new SoundStyle("DeterministicChaos/Assets/Sounds/KnightIndicator")
-                {
-                    Volume = 0.7f
-                }, Projectile.Center);
-            }
+            // Sound moved to first AI tick for MP consistency
             
             Projectile.netUpdate = true;
         }
@@ -68,6 +64,22 @@ namespace DeterministicChaos.Content.Projectiles.Enemy
 
         public override void AI()
         {
+            // On the first AI tick, correct timeLeft for lattice indicators.
+            // This runs on ALL sides (server + client) so it's always in sync.
+            if (Projectile.ai[0] < 0 && Projectile.ai[2] > 1f && Projectile.timeLeft > 72)
+                Projectile.timeLeft = 72;
+
+            // Play indicator sound on first AI tick (runs on all clients, unlike OnSpawn)
+            // Skip for lattice-spawned indicators
+            if (Projectile.timeLeft == TotalLife && Main.netMode != NetmodeID.Server
+                && !(Projectile.ai[0] < 0 && Projectile.ai[2] > 1f))
+            {
+                SoundEngine.PlaySound(new SoundStyle("DeterministicChaos/Assets/Sounds/KnightIndicator")
+                {
+                    Volume = 0.7f
+                }, Projectile.Center);
+            }
+
             Projectile.Center = new Vector2(Projectile.localAI[0], Projectile.localAI[1]);
 
             float age = TotalLife - Projectile.timeLeft;
@@ -97,7 +109,16 @@ namespace DeterministicChaos.Content.Projectiles.Enemy
 
             if (Projectile.timeLeft == PostLife + 2)
             {
-                // Play sound and screen shake on all clients
+                bool isLatticeKnife = Projectile.ai[0] < 0 && Projectile.ai[2] > 1f;
+
+                // Trigger arena split (runs on all sides for deterministic gameplay)
+                if (!isLatticeKnife)
+                {
+                    float worldAngle = Projectile.ai[1] + MathHelper.PiOver2 * Projectile.ai[2];
+                    BossArenaSystem.TriggerArenaSplit(Projectile.Center, worldAngle);
+                }
+
+                // Play sound and screen shake on all clients (not for lattice knife indicators)
                 if (Main.netMode != NetmodeID.Server)
                 {
                     SoundEngine.PlaySound(new SoundStyle("DeterministicChaos/Assets/Sounds/KnightBoxBreak")
@@ -105,15 +126,18 @@ namespace DeterministicChaos.Content.Projectiles.Enemy
                         Volume = 0.7f
                     }, Projectile.Center);
                     
-                    // Add screen shake
-                    Main.instance.CameraModifiers.Add(new Terraria.Graphics.CameraModifiers.PunchCameraModifier(
-                        Projectile.Center, 
-                        new Vector2(Main.rand.NextFloat(-1f, 1f), Main.rand.NextFloat(-1f, 1f)).SafeNormalize(Vector2.UnitX), 
-                        12f, // strength
-                        8f, // vibration speed
-                        20, // frames
-                        2000f // max distance for effect
-                    ));
+                    // Add screen shake (split screen slashes only)
+                    if (!isLatticeKnife)
+                    {
+                        Main.instance.CameraModifiers.Add(new Terraria.Graphics.CameraModifiers.PunchCameraModifier(
+                            Projectile.Center, 
+                            new Vector2(Main.rand.NextFloat(-1f, 1f), Main.rand.NextFloat(-1f, 1f)).SafeNormalize(Vector2.UnitX), 
+                            12f, // strength
+                            8f, // vibration speed
+                            20, // frames
+                            2000f // max distance for effect
+                        ));
+                    }
                 }
                 
                 // Spawn attacks server-side
@@ -175,25 +199,33 @@ namespace DeterministicChaos.Content.Projectiles.Enemy
 
             // Use the WORLD angle to spawn teeth along the slash line
             Vector2 along = new Vector2(1f, 0f).RotatedBy(worldAngle);
-            float lineLength = 2400f; // total line length
+            float lineLength = 4000f; // total line length, wide enough to reach arena corners
 
             int teeth = 20;
             float speed = 12f;
 
-            // Find Roaring Knight to check health
-            NPC knight = null;
-            for (int i = 0; i < Main.maxNPCs; i++)
+            // Final-stand indicators use |ai[2]| < 1, only 1-2 teeth per slash
+            if (Math.Abs(rotationDirection) < 1f)
             {
-                if (Main.npc[i].active && Main.npc[i].type == ModContent.NPCType<NPCs.Bosses.RoaringKnight>())
-                {
-                    knight = Main.npc[i];
-                    break;
-                }
+                teeth = Main.rand.Next(1, 3);
             }
-            
-            // Below half health: spawn fewer teeth
-            if (knight != null && knight.life < knight.lifeMax * 0.5f)
-                teeth = 8;
+            else
+            {
+                // Find Roaring Knight to check health
+                NPC knight = null;
+                for (int i = 0; i < Main.maxNPCs; i++)
+                {
+                    if (Main.npc[i].active && Main.npc[i].type == ModContent.NPCType<NPCs.Bosses.RoaringKnight>())
+                    {
+                        knight = Main.npc[i];
+                        break;
+                    }
+                }
+                
+                // Below half health: spawn fewer teeth
+                if (knight != null && knight.life < knight.lifeMax * 0.5f)
+                    teeth = 8;
+            }
                 
             for (int i = 0; i < teeth; i++)
             {
@@ -238,7 +270,25 @@ namespace DeterministicChaos.Content.Projectiles.Enemy
             bool inPost = Projectile.timeLeft <= PostLife;
 
             // Emissive, ignore lightColor parameter, use full brightness
-            Color c = inPost ? Color.White : Color.Red;
+            bool isLattice = Projectile.ai[0] < 0 && Projectile.ai[2] > 1f;
+            Color c;
+            if (isLattice)
+            {
+                // Lattice indicators: red during telegraph, white fading out once knives move
+                if (inPost)
+                {
+                    float fadeT = 1f - (Projectile.timeLeft / (float)PostLife);
+                    c = Color.White * (1f - fadeT);
+                }
+                else
+                {
+                    c = Color.Red;
+                }
+            }
+            else
+            {
+                c = inPost ? Color.White : Color.Red;
+            }
             c *= 0.95f;
 
             float shrinkT = 0f;
@@ -257,6 +307,12 @@ namespace DeterministicChaos.Content.Projectiles.Enemy
                 float scaleModifier = Projectile.ai[2];
                 xScale *= 0.4f; // Make it skinnier (40% width)
                 yScale *= scaleModifier; // Make it taller (2.5x height)
+            }
+            else
+            {
+                // Split screen indicator: scale to cover the full slash line
+                float targetLength = 4000f;
+                yScale = (targetLength / tex.Height) * (Projectile.scale / 2.5f);
             }
 
             Rectangle src = tex.Bounds;
