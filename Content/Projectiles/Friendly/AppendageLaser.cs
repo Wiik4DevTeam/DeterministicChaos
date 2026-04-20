@@ -9,12 +9,12 @@ using Terraria.ModLoader;
 
 namespace DeterministicChaos.Content.Projectiles.Friendly
 {
-    /// <summary>
-    /// Friendly laser beam fired by AppendageHandProjectile.
-    /// Reuses the TitanLaserBeam texture at a larger scale.
-    /// ai[0] = parent AppendageHandProjectile whoAmI
-    /// ai[1] = hand side (0 = left, 1 = right)
-    /// </summary>
+    
+    // Friendly laser beam fired by AppendageHandProjectile.
+    // Reuses the TitanLaserBeam texture at a larger scale.
+    // ai[0] = parent AppendageHandProjectile whoAmI
+    // ai[1] = hand side (0 = left, 1 = right)
+    
     public class AppendageLaser : ModProjectile
     {
         private const int TILE_SIZE = 20;

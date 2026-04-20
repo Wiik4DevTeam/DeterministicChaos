@@ -6,7 +6,20 @@ using Terraria.GameContent;
 using Terraria.ID;
 using Terraria.ModLoader;
 using DeterministicChaos.Content.Buffs;
+using DeterministicChaos.Content.Items;
+using DeterministicChaos.Content.Items.Accessories;
+using DeterministicChaos.Content.Items.BossBags;
+using DeterministicChaos.Content.Items.BossSummons;
+using DeterministicChaos.Content.Items.Consumables;
+using DeterministicChaos.Content.Items.DamageClasses;
+using DeterministicChaos.Content.Items.Globals;
+using DeterministicChaos.Content.Items.Materials;
+using DeterministicChaos.Content.Items.Placeable;
+using DeterministicChaos.Content.Items.Rarities;
+using DeterministicChaos.Content.Items.Weapons;
 using DeterministicChaos.Content.Items.Armor;
+using DeterministicChaos.Content.Items.Imbued;
+using DeterministicChaos.Content.SoulTraits.Armor;
 
 namespace DeterministicChaos.Content.Projectiles.Friendly
 {
@@ -98,23 +111,68 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
                 Dust dust = Dust.NewDustPerfect(target.Center, DustID.WhiteTorch, vel, 0, Color.White, 1.5f);
                 dust.noGravity = true;
             }
+
+            // Justice: Hypercrit VFX
+            Player player = Main.player[Projectile.owner];
+            var swordPlayer = player.GetModPlayer<RoaringSwordPlayer>();
+            if (swordPlayer.justiceHypercritPending)
+            {
+                swordPlayer.justiceHypercritPending = false;
+
+                for (int i = 0; i < 25; i++)
+                {
+                    Vector2 vel = Main.rand.NextVector2CircularEdge(8f, 8f);
+                    Dust dust = Dust.NewDustPerfect(target.Center, DustID.YellowTorch, vel, 0, default, 2f);
+                    dust.noGravity = true;
+                }
+                CombatText.NewText(target.Hitbox, new Color(255, 255, 50), damageDone, dramatic: true);
+                SoundEngine.PlaySound(new SoundStyle("DeterministicChaos/Assets/Sounds/Hypercrit") { Volume = 0.6f }, target.Center);
+
+                var hatPlayer = player.GetModPlayer<CowboyHatPlayer>();
+                if (hatPlayer.hasSheriffHat)
+                    hatPlayer.hypercritAttackSpeedTimer = 36;
+            }
         }
 
         public override void ModifyHitNPC(NPC target, ref NPC.HitModifiers modifiers)
         {
             if (target == null)
                 return;
+
+            Player player = Main.player[Projectile.owner];
+            var swordPlayer = player.GetModPlayer<RoaringSwordPlayer>();
+            int maxMarks = swordPlayer.willbreakerMaxMarks;
+            int variant = swordPlayer.imbuedWillbreakerVariant;
                 
             RoaringSwordMarkGlobalNPC markNPC = target.GetGlobalNPC<RoaringSwordMarkGlobalNPC>();
             if (markNPC.markStacks > 0)
             {
-                float damageMultiplier = 1f + (markNPC.markStacks / (float)RoaringSwordMarkGlobalNPC.MaxStacks) * 3f;
+                float damageMultiplier = 1f + (markNPC.markStacks / (float)maxMarks) * 3f;
+
+                // Patience: +20% max damage
+                if (variant == (int)ImbuedWillbreakerVariant.Patience)
+                    damageMultiplier *= 1.2f;
+
                 modifiers.SourceDamage *= damageMultiplier;
                 
-                if (markNPC.markStacks >= RoaringSwordMarkGlobalNPC.MaxStacks)
+                if (markNPC.markStacks >= maxMarks)
                 {
                     modifiers.SetCrit();
                 }
+            }
+
+            // Justice: Lunge attacks always hypercrit (guaranteed crit + 1.5x damage = 3x total)
+            if (variant == (int)ImbuedWillbreakerVariant.Justice)
+            {
+                modifiers.SetCrit();
+                modifiers.FinalDamage *= 1.5f;
+                swordPlayer.justiceHypercritPending = true;
+            }
+
+            // Perseverance: Apply accumulated mana overcharge bonus
+            if (variant == (int)ImbuedWillbreakerVariant.Perseverance && swordPlayer.perseveranceManaBonus > 0f)
+            {
+                modifiers.SourceDamage *= 1f + swordPlayer.perseveranceManaBonus;
             }
         }
 
@@ -157,6 +215,16 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
             if (tex == null)
                 return false;
 
+            // Imbued Willbreaker trait tint
+            Color traitTint = Color.White;
+            Player owner = Main.player[Projectile.owner];
+            if (owner != null && owner.active)
+            {
+                var sp = owner.GetModPlayer<RoaringSwordPlayer>();
+                if (sp.isHoldingWillbreaker)
+                    traitTint = ImbuedTraitColor.FromZeroDetermination(sp.imbuedWillbreakerVariant);
+            }
+
             int frameWidth = tex.Width;
             int frameHeight = tex.Height / Frames;
 
@@ -169,7 +237,7 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
             float curHeightScale = MathHelper.Lerp(HeightScale, 0f, lifeT);
             Vector2 drawScale = new Vector2(WidthScale * Projectile.scale, System.Math.Max(0.001f, curHeightScale * Projectile.scale));
 
-            Main.EntitySpriteDraw(tex, pos, src, Color.White, Projectile.rotation, origin, drawScale, SpriteEffects.None, 0);
+            Main.EntitySpriteDraw(tex, pos, src, traitTint, Projectile.rotation, origin, drawScale, SpriteEffects.None, 0);
             return false;
         }
     }

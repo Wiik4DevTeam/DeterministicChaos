@@ -24,7 +24,7 @@ namespace DeterministicChaos.Content.SoulTraits
                 SoulTraitType.Kindness => new Color(50, 205, 50),
                 SoulTraitType.Bravery => new Color(255, 165, 0),
                 SoulTraitType.Patience => new Color(0, 255, 255),
-                SoulTraitType.Integrity => new Color(30, 144, 255),
+                SoulTraitType.Integrity => new Color(0, 0, 255),
                 SoulTraitType.Perseverance => new Color(255, 0, 255),
                 SoulTraitType.Determination => new Color(255, 0, 0),
                 _ => Color.Gray

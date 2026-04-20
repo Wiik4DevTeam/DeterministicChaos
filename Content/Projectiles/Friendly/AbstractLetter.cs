@@ -5,6 +5,17 @@ using Terraria.Audio;
 using Terraria.ID;
 using Terraria.ModLoader;
 using DeterministicChaos.Content.Items;
+using DeterministicChaos.Content.Items.Accessories;
+using DeterministicChaos.Content.Items.BossBags;
+using DeterministicChaos.Content.Items.BossSummons;
+using DeterministicChaos.Content.Items.Consumables;
+using DeterministicChaos.Content.Items.DamageClasses;
+using DeterministicChaos.Content.Items.Globals;
+using DeterministicChaos.Content.Items.Materials;
+using DeterministicChaos.Content.Items.Placeable;
+using DeterministicChaos.Content.Items.Rarities;
+using DeterministicChaos.Content.Items.Weapons;
+using DeterministicChaos.Content.Items.Prefixes;
 
 namespace DeterministicChaos.Content.Projectiles.Friendly
 {
@@ -351,7 +362,8 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
                 Player owner = Main.player[Projectile.owner];
                 if (owner.active && !owner.dead)
                 {
-                    owner.Heal(2);
+                    int heal = owner.GetModPlayer<PrefixEffectPlayer>().ScaleHeal(2);
+                    owner.Heal(heal);
                 }
             }
         }
@@ -387,7 +399,9 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
 
                 if (Projectile.Hitbox.Intersects(p.Hitbox))
                 {
-                    p.Heal(2);
+                    Player owner = Main.player[Projectile.owner];
+                    int heal = owner.GetModPlayer<PrefixEffectPlayer>().ScaleHeal(2);
+                    p.Heal(heal);
 
                     // VFX
                     for (int d = 0; d < 8; d++)

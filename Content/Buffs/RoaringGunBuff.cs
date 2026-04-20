@@ -2,6 +2,16 @@ using Microsoft.Xna.Framework;
 using Terraria;
 using Terraria.ModLoader;
 using DeterministicChaos.Content.Items;
+using DeterministicChaos.Content.Items.Accessories;
+using DeterministicChaos.Content.Items.BossBags;
+using DeterministicChaos.Content.Items.BossSummons;
+using DeterministicChaos.Content.Items.Consumables;
+using DeterministicChaos.Content.Items.DamageClasses;
+using DeterministicChaos.Content.Items.Globals;
+using DeterministicChaos.Content.Items.Materials;
+using DeterministicChaos.Content.Items.Placeable;
+using DeterministicChaos.Content.Items.Rarities;
+using DeterministicChaos.Content.Items.Weapons;
 
 namespace DeterministicChaos.Content.Buffs
 {
@@ -50,7 +60,7 @@ namespace DeterministicChaos.Content.Buffs
             else
                 speedMult = 5f;
 
-            tip = $"Fire rate: {speedMult:F1}x\nMax stacks: {RoaringGun.MaxStacks}";
+            tip = $"Fire rate: {speedMult:F1}x\nMax stacks: {gunPlayer.gunMaxStacks}";
             
             // Change rarity color based on stacks
             if (stacks >= 20)

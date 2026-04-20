@@ -13,24 +13,28 @@ namespace DeterministicChaos.Content.Buffs
         public override bool InstancePerEntity => true;
         
         public int markStacks = 0;
+        public int currentMaxStacks = MaxStacks;
         
         public override void ResetEffects(NPC npc)
         {
             if (!npc.HasBuff(ModContent.BuffType<EyeDebuff>()))
             {
                 markStacks = 0;
+                currentMaxStacks = MaxStacks;
             }
         }
         
-        public void AddMark(NPC npc, int stacks = 1)
+        public void AddMark(NPC npc, int stacks = 1, int maxStacks = MaxStacks)
         {
-            markStacks = System.Math.Min(markStacks + stacks, MaxStacks);
+            currentMaxStacks = System.Math.Max(currentMaxStacks, maxStacks);
+            markStacks = System.Math.Min(markStacks + stacks, maxStacks);
             npc.AddBuff(ModContent.BuffType<EyeDebuff>(), 360);
         }
         
         public void ClearMarks(NPC npc)
         {
             markStacks = 0;
+            currentMaxStacks = MaxStacks;
             int buffIndex = npc.FindBuffIndex(ModContent.BuffType<EyeDebuff>());
             if (buffIndex >= 0)
             {
@@ -42,7 +46,7 @@ namespace DeterministicChaos.Content.Buffs
         {
             if (markStacks > 0)
             {
-                drawColor = Color.Lerp(drawColor, Color.White, 0.3f * (markStacks / (float)MaxStacks));
+                drawColor = Color.Lerp(drawColor, Color.White, 0.3f * (markStacks / (float)currentMaxStacks));
             }
         }
         
@@ -58,8 +62,8 @@ namespace DeterministicChaos.Content.Buffs
             Vector2 drawPos = npc.Center - screenPos;
             drawPos.Y -= npc.height / 2f + 20f;
             
-            float scale = 0.5f + (markStacks / (float)MaxStacks) * 0.5f;
-            float alpha = 0.6f + (markStacks / (float)MaxStacks) * 0.4f;
+            float scale = 0.5f + (markStacks / (float)currentMaxStacks) * 0.5f;
+            float alpha = 0.6f + (markStacks / (float)currentMaxStacks) * 0.4f;
             
             Vector2 origin = new Vector2(eyeTexture.Width / 2f, eyeTexture.Height / 2f);
             
@@ -75,7 +79,7 @@ namespace DeterministicChaos.Content.Buffs
                 0f
             );
             
-            if (markStacks >= MaxStacks)
+            if (markStacks >= currentMaxStacks)
             {
                 for (int i = 0; i < 4; i++)
                 {

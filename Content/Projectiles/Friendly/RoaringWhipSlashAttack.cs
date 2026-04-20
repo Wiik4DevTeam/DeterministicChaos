@@ -6,6 +6,18 @@ using Terraria.Audio;
 using Terraria.GameContent;
 using Terraria.ID;
 using Terraria.ModLoader;
+using DeterministicChaos.Content.Items;
+using DeterministicChaos.Content.Items.Accessories;
+using DeterministicChaos.Content.Items.BossBags;
+using DeterministicChaos.Content.Items.BossSummons;
+using DeterministicChaos.Content.Items.Consumables;
+using DeterministicChaos.Content.Items.DamageClasses;
+using DeterministicChaos.Content.Items.Globals;
+using DeterministicChaos.Content.Items.Materials;
+using DeterministicChaos.Content.Items.Placeable;
+using DeterministicChaos.Content.Items.Rarities;
+using DeterministicChaos.Content.Items.Weapons;
+using DeterministicChaos.Content.Items.Imbued;
 
 namespace DeterministicChaos.Content.Projectiles.Friendly
 {
@@ -197,8 +209,16 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
             if ((flipFlags & 1) != 0) fx |= SpriteEffects.FlipHorizontally;
             if ((flipFlags & 2) != 0) fx |= SpriteEffects.FlipVertically;
             
-            // White color for player version
-            Color drawColor = Color.White * 0.95f;
+            // White color for player version, tinted by Gnomon imbue
+            Color drawColor = Color.White;
+            Player owner = Main.player[Projectile.owner];
+            if (owner != null && owner.active)
+            {
+                var wp = owner.GetModPlayer<RoaringWhipPlayer>();
+                if (wp.isHoldingGnomon && wp.imbuedGnomonVariant != ImbuedGnomonVariant.None)
+                    drawColor = ImbuedTraitColor.FromNoneFirst((int)wp.imbuedGnomonVariant);
+            }
+            drawColor *= 0.95f;
             
             Main.EntitySpriteDraw(tex, pos, src, drawColor, Projectile.rotation, origin, drawScale, fx, 0);
             return false;

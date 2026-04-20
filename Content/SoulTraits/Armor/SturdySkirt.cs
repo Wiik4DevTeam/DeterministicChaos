@@ -19,7 +19,7 @@ namespace DeterministicChaos.Content.SoulTraits.Armor
 
         public override void ModifyTooltips(System.Collections.Generic.List<TooltipLine> tooltips)
         {
-            Color integrityColor = new Color(30, 144, 255);
+            Color integrityColor = new Color(0, 0, 255);
 
             foreach (var line in tooltips)
             {
@@ -42,7 +42,7 @@ namespace DeterministicChaos.Content.SoulTraits.Armor
                 {
                     if (tutuPlayer.dashTimer > 0)
                     {
-                        tooltips.Add(new TooltipLine(Mod, "DashStatus", $"[c/1E90FF:DASHING!]"));
+                        tooltips.Add(new TooltipLine(Mod, "DashStatus", $"[c/0000FF:DASHING!]"));
                     }
                     else if (tutuPlayer.dashCooldown > 0)
                     {
@@ -51,7 +51,7 @@ namespace DeterministicChaos.Content.SoulTraits.Armor
                     }
                     else
                     {
-                        tooltips.Add(new TooltipLine(Mod, "DashStatus", $"[c/1E90FF:Dash ready! (Calamity Dash key)]"));
+                        tooltips.Add(new TooltipLine(Mod, "DashStatus", $"[c/0000FF:Dash ready! (Calamity Dash key)]"));
                     }
 
                     if (tutuPlayer.pendingDotDamage > 0)

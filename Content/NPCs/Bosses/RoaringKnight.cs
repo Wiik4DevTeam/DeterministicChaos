@@ -10,6 +10,16 @@ using Terraria.GameContent.ItemDropRules;
 using Terraria.ID;
 using Terraria.ModLoader;
 using DeterministicChaos.Content.Items;
+using DeterministicChaos.Content.Items.Accessories;
+using DeterministicChaos.Content.Items.BossBags;
+using DeterministicChaos.Content.Items.BossSummons;
+using DeterministicChaos.Content.Items.Consumables;
+using DeterministicChaos.Content.Items.DamageClasses;
+using DeterministicChaos.Content.Items.Globals;
+using DeterministicChaos.Content.Items.Materials;
+using DeterministicChaos.Content.Items.Placeable;
+using DeterministicChaos.Content.Items.Rarities;
+using DeterministicChaos.Content.Items.Weapons;
 using DeterministicChaos.Content.NPCs.Bosses;
 using DeterministicChaos.Content.Projectiles;
 using DeterministicChaos.Content.Projectiles;
@@ -664,8 +674,8 @@ namespace DeterministicChaos.Content.NPCs.Bosses
         public override void ModifyNPCLoot(NPCLoot npcLoot)
         {
             // Boss bag (Expert/Master/Revengeance/Death)
-            var bagRule = new LeadingConditionRule(new Items.BagDropCondition());
-            bagRule.OnSuccess(ItemDropRule.Common(ModContent.ItemType<Items.KnightBossBag>()));
+            var bagRule = new LeadingConditionRule(new BagDropCondition());
+            bagRule.OnSuccess(ItemDropRule.Common(ModContent.ItemType<KnightBossBag>()));
             npcLoot.Add(bagRule);
 
             // Trophy (10% chance on any difficulty)
@@ -675,7 +685,7 @@ namespace DeterministicChaos.Content.NPCs.Bosses
             npcLoot.Add(ItemDropRule.MasterModeCommonDrop(ModContent.ItemType<Trophies.KnightRelic>()));
 
             // Normal mode direct drops (bag handles Expert+/Rev+)
-            var directDrop = new LeadingConditionRule(new Items.DirectDropCondition());
+            var directDrop = new LeadingConditionRule(new DirectDropCondition());
 
             // Dark Fragments (30-40)
             directDrop.OnSuccess(ItemDropRule.Common(ModContent.ItemType<DarkFragment>(), 1, 30, 40));
@@ -683,14 +693,24 @@ namespace DeterministicChaos.Content.NPCs.Bosses
             // Dark Shard weapon (guaranteed)
             directDrop.OnSuccess(ItemDropRule.Common(ModContent.ItemType<DarkShard>(), 1));
 
+            // 2 random Roaring weapons (guaranteed)
+            directDrop.OnSuccess(new FewFromOptionsNotScaledWithLuckDropRule(2, 1, 1,
+                ModContent.ItemType<RoaringSword>(),
+                ModContent.ItemType<RoaringBow>(),
+                ModContent.ItemType<RoaringGun>(),
+                ModContent.ItemType<RoaringTome>(),
+                ModContent.ItemType<RoaringSummon>(),
+                ModContent.ItemType<RoaringWhip>(),
+                ModContent.ItemType<RoaringYoyo>()));
+
             // Always drop one of Rod of Stagnation or Roaring Shield.
             directDrop.OnSuccess(ItemDropRule.OneFromOptions(1,
-                ModContent.ItemType<Items.RodOfStagnation>(),
-                ModContent.ItemType<Items.RoaringShield>()));
+                ModContent.ItemType<RodOfStagnation>(),
+                ModContent.ItemType<RoaringShield>()));
 
             // Ring and Lens drop independently at random (25% each).
-            directDrop.OnSuccess(ItemDropRule.Common(ModContent.ItemType<Items.RoaringRing>(), 4));
-            directDrop.OnSuccess(ItemDropRule.Common(ModContent.ItemType<Items.RoaringLens>(), 4));
+            directDrop.OnSuccess(ItemDropRule.Common(ModContent.ItemType<RoaringRing>(), 4));
+            directDrop.OnSuccess(ItemDropRule.Common(ModContent.ItemType<RoaringLens>(), 4));
 
             npcLoot.Add(directDrop);
         }

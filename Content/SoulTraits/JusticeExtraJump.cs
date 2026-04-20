@@ -121,4 +121,60 @@ namespace DeterministicChaos.Content.SoulTraits
             dust.velocity.X = Main.rand.NextFloat(-0.8f, 0.8f);
         }
     }
+
+    public class JusticeExtraJump3 : ExtraJump
+    {
+        public override Position GetDefaultPosition() => new After(FartInAJar);
+
+        public override float GetDurationMultiplier(Player player)
+        {
+            return 1.0f;
+        }
+
+        public override void UpdateHorizontalSpeeds(Player player)
+        {
+            player.runAcceleration *= 1.15f;
+            player.maxRunSpeed *= 1.10f;
+        }
+
+        public override void OnStarted(Player player, ref bool playSound)
+        {
+            playSound = true;
+
+            for (int i = 0; i < 10; i++)
+            {
+                Dust dust = Dust.NewDustDirect(
+                    player.position,
+                    player.width,
+                    player.height,
+                    DustID.GoldFlame,
+                    player.velocity.X * 0.5f,
+                    player.velocity.Y * 0.5f,
+                    100,
+                    default,
+                    1.1f
+                );
+                dust.noGravity = true;
+                dust.velocity *= 1.2f;
+            }
+        }
+
+        public override void ShowVisuals(Player player)
+        {
+            Dust dust = Dust.NewDustDirect(
+                player.position + new Vector2(Main.rand.Next(player.width), player.height),
+                4,
+                4,
+                DustID.GoldFlame,
+                0f,
+                0f,
+                100,
+                default,
+                0.8f
+            );
+            dust.noGravity = true;
+            dust.velocity.Y = -1f;
+            dust.velocity.X = Main.rand.NextFloat(-0.6f, 0.6f);
+        }
+    }
 }

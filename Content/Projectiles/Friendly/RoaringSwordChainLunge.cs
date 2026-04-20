@@ -1,5 +1,6 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using Terraria;
@@ -9,7 +10,19 @@ using Terraria.ID;
 using Terraria.ModLoader;
 using DeterministicChaos.Content.Buffs;
 using DeterministicChaos.Content.Items;
+using DeterministicChaos.Content.Items.Accessories;
+using DeterministicChaos.Content.Items.BossBags;
+using DeterministicChaos.Content.Items.BossSummons;
+using DeterministicChaos.Content.Items.Consumables;
+using DeterministicChaos.Content.Items.DamageClasses;
+using DeterministicChaos.Content.Items.Globals;
+using DeterministicChaos.Content.Items.Materials;
+using DeterministicChaos.Content.Items.Placeable;
+using DeterministicChaos.Content.Items.Rarities;
+using DeterministicChaos.Content.Items.Weapons;
 using DeterministicChaos.Content.Items.Armor;
+using DeterministicChaos.Content.Items.Imbued;
+using DeterministicChaos.Content.Items.Prefixes;
 using DeterministicChaos.Content.VFX;
 
 namespace DeterministicChaos.Content.Projectiles.Friendly
@@ -29,6 +42,7 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
         private bool hitTarget = false;
         private bool slashSpawned = false;
         private bool initialized = false;
+        private bool healedAlly = false;
         
         // Track NPCs already hit in this chain to prevent double-targeting
         private static HashSet<int> chainHitNPCs = new HashSet<int>();
@@ -43,6 +57,7 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
             writer.Write(hitTarget);
             writer.Write(slashSpawned);
             writer.Write(initialized);
+            writer.Write(healedAlly);
         }
 
         public override void ReceiveExtraAI(BinaryReader reader)
@@ -52,6 +67,7 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
             hitTarget = reader.ReadBoolean();
             slashSpawned = reader.ReadBoolean();
             initialized = reader.ReadBoolean();
+            healedAlly = reader.ReadBoolean();
         }
 
         public override void SetDefaults()
@@ -137,7 +153,51 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
                 if (Timer >= LungeDuration * 0.3f && !slashSpawned)
                 {
                     slashSpawned = true;
-                    SpawnChainSlash(player);
+                    // Don't spawn chain slash when targeting an ally
+                    if (TargetNPC < 1000)
+                        SpawnChainSlash(player);
+                }
+
+                // Kindness: Check proximity to ally target for healing
+                if (TargetNPC >= 1000 && !healedAlly)
+                {
+                    int allyIdx = (int)TargetNPC - 1000;
+                    if (allyIdx >= 0 && allyIdx < Main.maxPlayers)
+                    {
+                        Player ally = Main.player[allyIdx];
+                        if (ally != null && ally.active && !ally.dead &&
+                            Vector2.Distance(player.Center, ally.Center) < 60f)
+                        {
+                            healedAlly = true;
+                            hitTarget = true;
+
+                            int weaponDamage = Projectile.damage;
+                            int healAmount = Math.Max(1, (int)(weaponDamage * 0.10f));
+
+                            var prefixPlayer = player.GetModPlayer<PrefixEffectPlayer>();
+                            healAmount = prefixPlayer.ScaleHeal(healAmount);
+
+                            var emblemPlayer = player.GetModPlayer<ImbuedEmblemPlayer>();
+                            if (emblemPlayer.hasKindnessEmblem)
+                                healAmount = (int)(healAmount * 1.25f);
+
+                            if (healAmount > 0 && ally.statLife < ally.statLifeMax2)
+                            {
+                                ally.statLife = Math.Min(ally.statLife + healAmount, ally.statLifeMax2);
+                                ally.HealEffect(healAmount);
+                            }
+
+                            RoaringGunPlayer.NotifyAllyHealed(Projectile.owner);
+
+                            // Green healing dust burst
+                            for (int d = 0; d < 12; d++)
+                            {
+                                Vector2 vel = Main.rand.NextVector2CircularEdge(5f, 5f);
+                                Dust dust = Dust.NewDustPerfect(ally.Center, DustID.GreenTorch, vel, 0, default, 1.5f);
+                                dust.noGravity = true;
+                            }
+                        }
+                    }
                 }
             }
             
@@ -207,6 +267,9 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
         {
             if (player == null || !player.active || player.dead)
                 return;
+
+            var swordPlayer = player.GetModPlayer<RoaringSwordPlayer>();
+            int maxMarks = swordPlayer.willbreakerMaxMarks;
                 
             float closestDist = ChainRadius;
             NPC closestTarget = null;
@@ -217,16 +280,13 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
                 if (!npc.active || npc.friendly || npc.dontTakeDamage || npc.immortal)
                     continue;
                 
-                // Skip NPCs we've already hit in this chain
                 if (chainHitNPCs.Contains(npc.whoAmI))
                     continue;
                 
-                // Only target enemies with FULL mark stacks (5)
                 RoaringSwordMarkGlobalNPC markNPC = npc.GetGlobalNPC<RoaringSwordMarkGlobalNPC>();
-                if (markNPC.markStacks < RoaringSwordMarkGlobalNPC.MaxStacks)
+                if (markNPC.markStacks < maxMarks)
                     continue;
                 
-                // Skip worm segments
                 if (npc.realLife >= 0 && npc.realLife != npc.whoAmI)
                     continue;
                     
@@ -257,9 +317,56 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
                     closestTarget.whoAmI
                 );
             }
+            else if (swordPlayer.imbuedWillbreakerVariant == (int)ImbuedWillbreakerVariant.Kindness)
+            {
+                // Kindness: After all enemies, lunge to an ally to heal them
+                float closestAllyDist = ChainRadius;
+                int closestAllyIdx = -1;
+
+                for (int i = 0; i < Main.maxPlayers; i++)
+                {
+                    if (i == Projectile.owner) continue;
+                    Player ally = Main.player[i];
+                    if (!ally.active || ally.dead || ally.team != player.team || player.team == 0)
+                        continue;
+                    if (ally.statLife >= ally.statLifeMax2)
+                        continue;
+
+                    float dist = Vector2.Distance(player.Center, ally.Center);
+                    if (dist < closestAllyDist)
+                    {
+                        closestAllyDist = dist;
+                        closestAllyIdx = i;
+                    }
+                }
+
+                if (closestAllyIdx >= 0)
+                {
+                    player.itemAnimation = 0;
+                    player.itemTime = 0;
+
+                    Player ally = Main.player[closestAllyIdx];
+                    Vector2 direction = (ally.Center - player.Center).SafeNormalize(Vector2.UnitX);
+
+                    Projectile.NewProjectile(
+                        Projectile.GetSource_FromThis(),
+                        player.Center,
+                        direction,
+                        ModContent.ProjectileType<RoaringSwordChainLunge>(),
+                        Projectile.damage,
+                        Projectile.knockBack,
+                        Projectile.owner,
+                        0f,
+                        1000f + closestAllyIdx
+                    );
+                }
+                else
+                {
+                    chainHitNPCs.Clear();
+                }
+            }
             else
             {
-                // No more valid targets, clear the hit list
                 chainHitNPCs.Clear();
             }
         }
@@ -273,6 +380,12 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
             Texture2D texture = TextureAssets.Projectile[ModContent.ProjectileType<RoaringSwordSwing>()].Value;
             if (texture == null)
                 return false;
+
+            // Imbued Willbreaker trait tint
+            Color traitTint = Color.White;
+            var sp = player.GetModPlayer<RoaringSwordPlayer>();
+            if (sp.isHoldingWillbreaker)
+                traitTint = ImbuedTraitColor.FromZeroDetermination(sp.imbuedWillbreakerVariant);
                 
             Vector2 origin = new Vector2(texture.Width * 0.5f, texture.Height);
             
@@ -290,7 +403,7 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
                     texture,
                     afterimagePositions[i] + handOffset - Main.screenPosition,
                     null,
-                    Color.White * alpha,
+                    traitTint * alpha,
                     afterimageRotation,
                     origin,
                     scale,
@@ -306,7 +419,7 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
                     texture,
                     player.Center + handOffset + offset - Main.screenPosition,
                     null,
-                    Color.White * 0.6f,
+                    traitTint * 0.6f,
                     drawRotation,
                     origin,
                     Projectile.scale * 1.1f,
@@ -319,7 +432,7 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
                 texture,
                 player.Center + handOffset - Main.screenPosition,
                 null,
-                Color.White,
+                traitTint,
                 drawRotation,
                 origin,
                 Projectile.scale,

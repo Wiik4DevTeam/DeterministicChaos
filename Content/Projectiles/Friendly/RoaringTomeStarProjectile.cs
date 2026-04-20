@@ -3,6 +3,18 @@ using Microsoft.Xna.Framework.Graphics;
 using Terraria;
 using Terraria.ID;
 using Terraria.ModLoader;
+using DeterministicChaos.Content.Items;
+using DeterministicChaos.Content.Items.Accessories;
+using DeterministicChaos.Content.Items.BossBags;
+using DeterministicChaos.Content.Items.BossSummons;
+using DeterministicChaos.Content.Items.Consumables;
+using DeterministicChaos.Content.Items.DamageClasses;
+using DeterministicChaos.Content.Items.Globals;
+using DeterministicChaos.Content.Items.Materials;
+using DeterministicChaos.Content.Items.Placeable;
+using DeterministicChaos.Content.Items.Rarities;
+using DeterministicChaos.Content.Items.Weapons;
+using DeterministicChaos.Content.Items.Imbued;
 
 namespace DeterministicChaos.Content.Projectiles.Friendly
 {
@@ -34,9 +46,17 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
         {
             Projectile.rotation = 0f;
 
-            // Pulsing scale effect
+            // Pulsing scale effect — Perseverance: smaller stars
             Projectile.ai[0]++;
-            float pulse = 0.6f + 0.1f * (float)System.Math.Sin(Projectile.ai[0] * 0.15f);
+            float baseScale = 0.6f;
+            Player owner = Main.player[Projectile.owner];
+            if (owner.active)
+            {
+                var tomePlayer = owner.GetModPlayer<RoaringTomePlayer>();
+                if (tomePlayer.imbuedClarityVariant == ImbuedClarityVariant.Perseverance)
+                    baseScale = 0.4f;
+            }
+            float pulse = baseScale + 0.1f * (float)System.Math.Sin(Projectile.ai[0] * 0.15f);
             Projectile.scale = pulse;
 
             float pullRadius = 1200f;
@@ -95,6 +115,16 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
             Texture2D texture = Terraria.GameContent.TextureAssets.Projectile[Projectile.type].Value;
             Vector2 origin = texture.Size() * 0.5f;
 
+            // Imbued Clarity trait tint
+            Color traitTint = Color.White;
+            Player owner = Main.player[Projectile.owner];
+            if (owner != null && owner.active)
+            {
+                var tp = owner.GetModPlayer<RoaringTomePlayer>();
+                if (tp.isHoldingClarity)
+                    traitTint = ImbuedTraitColor.FromNoneFirst((int)tp.imbuedClarityVariant);
+            }
+
             // Draw clean afterimages, use Projectile.Center for correct positioning
             for (int i = Projectile.oldPos.Length - 1; i >= 0; i--)
             {
@@ -102,14 +132,14 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
                 // oldPos stores top-left, so add half the hitbox size to get center
                 Vector2 drawPos = Projectile.oldPos[i] + new Vector2(Projectile.width / 2f, Projectile.height / 2f) - Main.screenPosition;
                 float progress = i / (float)Projectile.oldPos.Length;
-                Color trailColor = Color.White * (1f - progress) * 0.5f;
+                Color trailColor = ImbuedTraitColor.Multiply(Color.White, traitTint) * (1f - progress) * 0.5f;
                 float trailScale = Projectile.scale * (1f - progress * 0.3f);
                 Main.EntitySpriteDraw(texture, drawPos, null, trailColor, 0f, origin, trailScale, SpriteEffects.None, 0);
             }
 
             // Draw main sprite centered on hitbox
             Vector2 mainDrawPos = Projectile.Center - Main.screenPosition;
-            Main.EntitySpriteDraw(texture, mainDrawPos, null, Color.White, 0f, origin, Projectile.scale, SpriteEffects.None, 0);
+            Main.EntitySpriteDraw(texture, mainDrawPos, null, traitTint, 0f, origin, Projectile.scale, SpriteEffects.None, 0);
 
             return false;
         }

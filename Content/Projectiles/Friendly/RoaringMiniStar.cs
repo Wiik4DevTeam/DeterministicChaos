@@ -4,6 +4,17 @@ using Terraria;
 using Terraria.GameContent;
 using Terraria.ID;
 using Terraria.ModLoader;
+using DeterministicChaos.Content.Items.Imbued;
+using DeterministicChaos.Content.Items.Accessories;
+using DeterministicChaos.Content.Items.BossBags;
+using DeterministicChaos.Content.Items.BossSummons;
+using DeterministicChaos.Content.Items.Consumables;
+using DeterministicChaos.Content.Items.DamageClasses;
+using DeterministicChaos.Content.Items.Globals;
+using DeterministicChaos.Content.Items.Materials;
+using DeterministicChaos.Content.Items.Placeable;
+using DeterministicChaos.Content.Items.Rarities;
+using DeterministicChaos.Content.Items.Weapons;
 
 namespace DeterministicChaos.Content.Projectiles.Friendly
 {
@@ -43,21 +54,85 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
 
         public override void AI()
         {
-            // Shrink over time
-            Projectile.scale -= shrinkRate;
-            
+            ImbuedStaticVariant variant = (ImbuedStaticVariant)(int)Projectile.ai[0];
+            bool longLived = variant == ImbuedStaticVariant.Patience
+                || variant == ImbuedStaticVariant.Perseverance
+                || variant == ImbuedStaticVariant.Bravery;
+
+            // Long-lived variants shrink more slowly so they actually live longer
+            float effectiveShrink = longLived ? 0.0025f : shrinkRate;
+            Projectile.scale -= effectiveShrink;
+
             // Kill when too small
             if (Projectile.scale <= 0.1f)
             {
                 Projectile.Kill();
                 return;
             }
-            
-            // Slight deceleration
-            Projectile.velocity *= 0.98f;
-            
+
+            // Track age via localAI[0]
+            Projectile.localAI[0]++;
+            int age = (int)Projectile.localAI[0];
+
+            Player owner = Main.player[Projectile.owner];
+
+            if (variant == ImbuedStaticVariant.Patience && age >= 60 && owner != null && owner.active)
+            {
+                // After a few seconds, slowly track the nearest enemy
+                NPC tgt = FindNearestEnemy(Projectile.Center, 800f);
+                if (tgt != null)
+                {
+                    Vector2 dir = (tgt.Center - Projectile.Center).SafeNormalize(Vector2.Zero);
+                    float speed = System.Math.Max(Projectile.velocity.Length(), 4f);
+                    Projectile.velocity = Vector2.Lerp(Projectile.velocity, dir * speed, 0.05f);
+                }
+                else
+                {
+                    Projectile.velocity *= 0.99f;
+                }
+            }
+            else if (variant == ImbuedStaticVariant.Bravery && owner != null && owner.active)
+            {
+                // Always slowly move toward the player after spawning
+                Vector2 dir = (owner.Center - Projectile.Center).SafeNormalize(Vector2.Zero);
+                float speed = System.Math.Max(Projectile.velocity.Length(), 3.5f);
+                Projectile.velocity = Vector2.Lerp(Projectile.velocity, dir * speed, 0.04f);
+            }
+            else
+            {
+                // Slight deceleration
+                Projectile.velocity *= 0.98f;
+            }
+
             // Add some light
             Lighting.AddLight(Projectile.Center, 0.4f, 0.35f, 0.15f);
+        }
+
+        public override void ModifyHitNPC(NPC target, ref NPC.HitModifiers modifiers)
+        {
+            ImbuedStaticVariant variant = (ImbuedStaticVariant)(int)Projectile.ai[0];
+            // Integrity: stars do +20% damage
+            if (variant == ImbuedStaticVariant.Integrity)
+                modifiers.SourceDamage *= 1.2f;
+        }
+
+        private static NPC FindNearestEnemy(Vector2 center, float range)
+        {
+            float bestSq = range * range;
+            NPC best = null;
+            for (int i = 0; i < Main.maxNPCs; i++)
+            {
+                NPC n = Main.npc[i];
+                if (!n.active || n.friendly || n.dontTakeDamage || n.lifeMax <= 5 || n.CountsAsACritter)
+                    continue;
+                float d = Vector2.DistanceSquared(n.Center, center);
+                if (d < bestSq)
+                {
+                    bestSq = d;
+                    best = n;
+                }
+            }
+            return best;
         }
 
         public override bool PreDraw(ref Color lightColor)
@@ -65,8 +140,11 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
             Texture2D tex = TextureAssets.Projectile[Type].Value;
             Vector2 origin = tex.Size() * 0.5f;
 
-            // Golden/orange color tint
-            Color tint = new Color(255, 200, 100);
+            // Golden/orange color tint (multiplied by trait color when imbued)
+            Color baseTint = new Color(255, 200, 100);
+            int variantInt = (int)Projectile.ai[0];
+            Color traitTint = ImbuedTraitColor.FromNoneFirst(variantInt);
+            Color tint = ImbuedTraitColor.Multiply(baseTint, traitTint);
 
             // Draw trail
             for (int i = Projectile.oldPos.Length - 1; i >= 0; i--)

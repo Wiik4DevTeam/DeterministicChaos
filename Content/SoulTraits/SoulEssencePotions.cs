@@ -3,6 +3,16 @@ using Terraria;
 using Terraria.ID;
 using Terraria.Localization;
 using Terraria.ModLoader;
+using DeterministicChaos.Content.Items.Accessories;
+using DeterministicChaos.Content.Items.BossBags;
+using DeterministicChaos.Content.Items.BossSummons;
+using DeterministicChaos.Content.Items.Consumables;
+using DeterministicChaos.Content.Items.DamageClasses;
+using DeterministicChaos.Content.Items.Globals;
+using DeterministicChaos.Content.Items.Materials;
+using DeterministicChaos.Content.Items.Placeable;
+using DeterministicChaos.Content.Items.Rarities;
+using DeterministicChaos.Content.Items.Weapons;
 
 namespace DeterministicChaos.Content.SoulTraits
 {
@@ -203,21 +213,21 @@ namespace DeterministicChaos.Content.SoulTraits
             // T1 + Titansblood = T4
             CreateRecipe()
                 .AddIngredient<SoulEssenceT1>()
-                .AddIngredient<Items.Titansblood>(1)
+                .AddIngredient<Titansblood>(1)
                 .AddTile(TileID.Bottles)
                 .Register();
 
             // T2 + Titansblood = T4
             CreateRecipe()
                 .AddIngredient<SoulEssenceT2>()
-                .AddIngredient<Items.Titansblood>(1)
+                .AddIngredient<Titansblood>(1)
                 .AddTile(TileID.Bottles)
                 .Register();
 
             // T3 + Titansblood = T4
             CreateRecipe()
                 .AddIngredient<SoulEssenceT3>()
-                .AddIngredient<Items.Titansblood>(1)
+                .AddIngredient<Titansblood>(1)
                 .AddTile(TileID.Bottles)
                 .Register();
         }

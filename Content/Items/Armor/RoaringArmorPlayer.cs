@@ -4,6 +4,16 @@ using Terraria;
 using Terraria.DataStructures;
 using Terraria.ID;
 using Terraria.ModLoader;
+using DeterministicChaos.Content.Items.Accessories;
+using DeterministicChaos.Content.Items.BossBags;
+using DeterministicChaos.Content.Items.BossSummons;
+using DeterministicChaos.Content.Items.Consumables;
+using DeterministicChaos.Content.Items.DamageClasses;
+using DeterministicChaos.Content.Items.Globals;
+using DeterministicChaos.Content.Items.Materials;
+using DeterministicChaos.Content.Items.Placeable;
+using DeterministicChaos.Content.Items.Rarities;
+using DeterministicChaos.Content.Items.Weapons;
 
 namespace DeterministicChaos.Content.Items.Armor
 {
@@ -122,7 +132,7 @@ namespace DeterministicChaos.Content.Items.Armor
             // Melee set: Critical strikes restore 1% max health
             if (roaringMeleeSet && proj.CountsAsClass(DamageClass.Melee) && hit.Crit)
             {
-                int healAmount = (int)(Player.statLifeMax2 * 0.01f);
+                int healAmount = Player.GetModPlayer<Prefixes.PrefixEffectPlayer>().ScaleHeal((int)(Player.statLifeMax2 * 0.01f));
                 Player.Heal(healAmount);
             }
 
@@ -170,7 +180,7 @@ namespace DeterministicChaos.Content.Items.Armor
             // Melee set: Critical strikes restore 1% max health
             if (roaringMeleeSet && item.CountsAsClass(DamageClass.Melee) && hit.Crit)
             {
-                int healAmount = (int)(Player.statLifeMax2 * 0.01f);
+                int healAmount = Player.GetModPlayer<Prefixes.PrefixEffectPlayer>().ScaleHeal((int)(Player.statLifeMax2 * 0.01f));
                 Player.Heal(healAmount);
             }
 

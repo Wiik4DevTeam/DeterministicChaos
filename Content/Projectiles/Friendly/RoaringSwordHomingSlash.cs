@@ -7,6 +7,18 @@ using Terraria.GameContent;
 using Terraria.ID;
 using Terraria.ModLoader;
 using DeterministicChaos.Content.Buffs;
+using DeterministicChaos.Content.Items;
+using DeterministicChaos.Content.Items.Accessories;
+using DeterministicChaos.Content.Items.BossBags;
+using DeterministicChaos.Content.Items.BossSummons;
+using DeterministicChaos.Content.Items.Consumables;
+using DeterministicChaos.Content.Items.DamageClasses;
+using DeterministicChaos.Content.Items.Globals;
+using DeterministicChaos.Content.Items.Materials;
+using DeterministicChaos.Content.Items.Placeable;
+using DeterministicChaos.Content.Items.Rarities;
+using DeterministicChaos.Content.Items.Weapons;
+using DeterministicChaos.Content.Items.Imbued;
 
 namespace DeterministicChaos.Content.Projectiles.Friendly
 {
@@ -181,16 +193,37 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
         
         public override void ModifyHitNPC(NPC target, ref NPC.HitModifiers modifiers)
         {
+            Player player = Main.player[Projectile.owner];
+            var swordPlayer = player.GetModPlayer<RoaringSwordPlayer>();
+            int maxMarks = swordPlayer.willbreakerMaxMarks;
+            int variant = swordPlayer.imbuedWillbreakerVariant;
+
             RoaringSwordMarkGlobalNPC markNPC = target.GetGlobalNPC<RoaringSwordMarkGlobalNPC>();
             if (markNPC.markStacks > 0)
             {
-                float damageMultiplier = 1f + (markNPC.markStacks / (float)RoaringSwordMarkGlobalNPC.MaxStacks) * 4f;
+                float damageMultiplier = 1f + (markNPC.markStacks / (float)maxMarks) * 4f;
+
+                if (variant == (int)ImbuedWillbreakerVariant.Patience)
+                    damageMultiplier *= 1.2f;
+
                 modifiers.SourceDamage *= damageMultiplier;
                 
-                if (markNPC.markStacks >= RoaringSwordMarkGlobalNPC.MaxStacks)
+                if (markNPC.markStacks >= maxMarks)
                 {
                     modifiers.SetCrit();
                 }
+            }
+
+            if (variant == (int)ImbuedWillbreakerVariant.Justice)
+            {
+                modifiers.SetCrit();
+                modifiers.FinalDamage *= 1.5f;
+                swordPlayer.justiceHypercritPending = true;
+            }
+
+            if (variant == (int)ImbuedWillbreakerVariant.Perseverance && swordPlayer.perseveranceManaBonus > 0f)
+            {
+                modifiers.SourceDamage *= 1f + swordPlayer.perseveranceManaBonus;
             }
         }
 
@@ -210,12 +243,22 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
         {
             Texture2D texture = TextureAssets.Projectile[Type].Value;
             Vector2 origin = texture.Size() * 0.5f;
+
+            // Imbued Willbreaker trait tint
+            Color traitTint = Color.White;
+            Player owner = Main.player[Projectile.owner];
+            if (owner != null && owner.active)
+            {
+                var sp = owner.GetModPlayer<RoaringSwordPlayer>();
+                if (sp.isHoldingWillbreaker)
+                    traitTint = ImbuedTraitColor.FromZeroDetermination(sp.imbuedWillbreakerVariant);
+            }
             
             for (int i = 0; i < 5; i++)
             {
                 Vector2 drawPos = Projectile.Center - Projectile.velocity * (i * 0.5f) - Main.screenPosition;
                 float alpha = 1f - (i * 0.2f);
-                Color drawColor = Color.Lerp(Color.White, Color.Purple, i * 0.15f) * alpha * 0.6f;
+                Color drawColor = ImbuedTraitColor.Multiply(Color.Lerp(Color.White, Color.Purple, i * 0.15f), traitTint) * alpha * 0.6f;
                 
                 Main.EntitySpriteDraw(
                     texture,
@@ -234,7 +277,7 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
                 texture,
                 Projectile.Center - Main.screenPosition,
                 null,
-                Color.White,
+                traitTint,
                 Projectile.rotation + MathHelper.PiOver4,
                 origin,
                 Projectile.scale,

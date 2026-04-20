@@ -7,6 +7,16 @@ using Terraria.DataStructures;
 using DeterministicChaos.Content.NPCs.Bosses;
 using Terraria.Audio;
 using System;
+using DeterministicChaos.Content.Items.Accessories;
+using DeterministicChaos.Content.Items.BossBags;
+using DeterministicChaos.Content.Items.BossSummons;
+using DeterministicChaos.Content.Items.Consumables;
+using DeterministicChaos.Content.Items.DamageClasses;
+using DeterministicChaos.Content.Items.Globals;
+using DeterministicChaos.Content.Items.Materials;
+using DeterministicChaos.Content.Items.Placeable;
+using DeterministicChaos.Content.Items.Rarities;
+using DeterministicChaos.Content.Items.Weapons;
 
 namespace DeterministicChaos.Content.Projectiles.Friendly
 {
@@ -100,12 +110,12 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
                         SoundEngine.PlaySound(new SoundStyle("DeterministicChaos/Assets/Sounds/TitanStarHit") { Pitch = pitch }, Projectile.Center);
 
                         // Shake the TitanStar
-                        int starType = ModContent.NPCType<TitanStar>();
+                        int starType = ModContent.NPCType<NPCs.Bosses.TitanStar>();
                         for (int s = 0; s < Main.maxNPCs; s++)
                         {
                             NPC n = Main.npc[s];
                             if (n.active && n.type == starType && (int)n.ai[0] == target.whoAmI
-                                && n.ModNPC is TitanStar star)
+                                && n.ModNPC is NPCs.Bosses.TitanStar star)
                             {
                                 star.TriggerShake();
                                 break;

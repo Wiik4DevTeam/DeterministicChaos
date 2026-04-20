@@ -5,6 +5,16 @@ using Terraria.Audio;
 using Terraria.ID;
 using Terraria.ModLoader;
 using DeterministicChaos.Content.Items;
+using DeterministicChaos.Content.Items.Accessories;
+using DeterministicChaos.Content.Items.BossBags;
+using DeterministicChaos.Content.Items.BossSummons;
+using DeterministicChaos.Content.Items.Consumables;
+using DeterministicChaos.Content.Items.DamageClasses;
+using DeterministicChaos.Content.Items.Globals;
+using DeterministicChaos.Content.Items.Materials;
+using DeterministicChaos.Content.Items.Placeable;
+using DeterministicChaos.Content.Items.Rarities;
+using DeterministicChaos.Content.Items.Weapons;
 
 namespace DeterministicChaos.Content.Projectiles.Friendly
 {
@@ -86,6 +96,9 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
             Player owner = Main.player[Projectile.owner];
             var sfPlayer = owner.GetModPlayer<SteadfastV1Player>();
             sfPlayer.OnDashHitEnemy(target);
+
+            // Focus summons on hit target
+            owner.MinionAttackTargetNPC = target.whoAmI;
 
             SoundEngine.PlaySound(SoundID.DD2_MonkStaffGroundImpact with { Pitch = 0.3f }, target.Center);
 

@@ -4,6 +4,18 @@ using Terraria;
 using Terraria.ID;
 using Terraria.ModLoader;
 using DeterministicChaos.Content.NPCs.DarkWorldEnemies;
+using DeterministicChaos.Content.Items;
+using DeterministicChaos.Content.Items.Accessories;
+using DeterministicChaos.Content.Items.BossBags;
+using DeterministicChaos.Content.Items.BossSummons;
+using DeterministicChaos.Content.Items.Consumables;
+using DeterministicChaos.Content.Items.DamageClasses;
+using DeterministicChaos.Content.Items.Globals;
+using DeterministicChaos.Content.Items.Materials;
+using DeterministicChaos.Content.Items.Placeable;
+using DeterministicChaos.Content.Items.Rarities;
+using DeterministicChaos.Content.Items.Weapons;
+using DeterministicChaos.Content.Items.Prefixes;
 using DeterministicChaos.Content.Items.Sparks;
 
 namespace DeterministicChaos.Content.SoulTraits
@@ -254,8 +266,8 @@ namespace DeterministicChaos.Content.SoulTraits
         private void ShareHealWithAllies(Player source, int healAmount)
         {
             float range = 400f;
-            // Allies get 50% of the heal amount
-            int allyHeal = (int)(healAmount * 0.5f);
+            // Allies get 50% of the heal amount (scaled by Empathetic prefix)
+            int allyHeal = source.GetModPlayer<PrefixEffectPlayer>().ScaleHeal((int)(healAmount * 0.5f));
             if (allyHeal < 1)
                 allyHeal = 1;
 
@@ -266,6 +278,7 @@ namespace DeterministicChaos.Content.SoulTraits
                 {
                     if (Vector2.Distance(source.Center, other.Center) <= range)
                     {
+                        RoaringGunPlayer.NotifyAllyHealed(source.whoAmI);
                         other.statLife = System.Math.Min(other.statLife + allyHeal, other.statLifeMax2);
                         other.HealEffect(allyHeal);
                     }

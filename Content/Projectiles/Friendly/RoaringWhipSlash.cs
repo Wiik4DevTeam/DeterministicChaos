@@ -6,6 +6,18 @@ using Terraria.Audio;
 using Terraria.GameContent;
 using Terraria.ID;
 using Terraria.ModLoader;
+using DeterministicChaos.Content.Items;
+using DeterministicChaos.Content.Items.Accessories;
+using DeterministicChaos.Content.Items.BossBags;
+using DeterministicChaos.Content.Items.BossSummons;
+using DeterministicChaos.Content.Items.Consumables;
+using DeterministicChaos.Content.Items.DamageClasses;
+using DeterministicChaos.Content.Items.Globals;
+using DeterministicChaos.Content.Items.Materials;
+using DeterministicChaos.Content.Items.Placeable;
+using DeterministicChaos.Content.Items.Rarities;
+using DeterministicChaos.Content.Items.Weapons;
+using DeterministicChaos.Content.Items.Imbued;
 
 namespace DeterministicChaos.Content.Projectiles.Friendly
 {
@@ -175,8 +187,15 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
             float age = TotalLife - Projectile.timeLeft;
             bool inPost = Projectile.timeLeft <= PostLife;
             
-            // Emissive white/red color
+            // Emissive white/red color, tinted by Gnomon imbue
             Color c = inPost ? Color.White : Color.Red;
+            Player owner = Main.player[Projectile.owner];
+            if (owner != null && owner.active)
+            {
+                var wp = owner.GetModPlayer<RoaringWhipPlayer>();
+                if (wp.isHoldingGnomon && wp.imbuedGnomonVariant != ImbuedGnomonVariant.None)
+                    c = ImbuedTraitColor.Multiply(c, ImbuedTraitColor.FromNoneFirst((int)wp.imbuedGnomonVariant));
+            }
             c *= 0.95f;
             
             float shrinkT = 0f;

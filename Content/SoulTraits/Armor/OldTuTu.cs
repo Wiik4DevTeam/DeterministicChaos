@@ -6,6 +6,17 @@ using Terraria.Audio;
 using Terraria.DataStructures;
 using Terraria.ID;
 using Terraria.ModLoader;
+using DeterministicChaos.Content.Items.Prefixes;
+using DeterministicChaos.Content.Items.Accessories;
+using DeterministicChaos.Content.Items.BossBags;
+using DeterministicChaos.Content.Items.BossSummons;
+using DeterministicChaos.Content.Items.Consumables;
+using DeterministicChaos.Content.Items.DamageClasses;
+using DeterministicChaos.Content.Items.Globals;
+using DeterministicChaos.Content.Items.Materials;
+using DeterministicChaos.Content.Items.Placeable;
+using DeterministicChaos.Content.Items.Rarities;
+using DeterministicChaos.Content.Items.Weapons;
 
 namespace DeterministicChaos.Content.SoulTraits.Armor
 {
@@ -22,8 +33,8 @@ namespace DeterministicChaos.Content.SoulTraits.Armor
 
         public override void ModifyTooltips(System.Collections.Generic.List<TooltipLine> tooltips)
         {
-            // Integrity color: Blue (30, 144, 255)
-            Color integrityColor = new Color(30, 144, 255);
+            // Integrity color: Blue (0, 0, 255)
+            Color integrityColor = new Color(0, 0, 255);
             
             foreach (var line in tooltips)
             {
@@ -47,7 +58,7 @@ namespace DeterministicChaos.Content.SoulTraits.Armor
                 {
                     if (tutuPlayer.dashTimer > 0)
                     {
-                        tooltips.Add(new TooltipLine(Mod, "CurrentBonus", $"[c/1E90FF:DASHING!]"));
+                        tooltips.Add(new TooltipLine(Mod, "CurrentBonus", $"[c/0000FF:DASHING!]"));
                     }
                     else if (tutuPlayer.dashCooldown > 0)
                     {
@@ -56,7 +67,7 @@ namespace DeterministicChaos.Content.SoulTraits.Armor
                     }
                     else
                     {
-                        tooltips.Add(new TooltipLine(Mod, "CurrentBonus", $"[c/1E90FF:Dash ready! (Calamity Dash key)]"));
+                        tooltips.Add(new TooltipLine(Mod, "CurrentBonus", $"[c/0000FF:Dash ready! (Calamity Dash key)]"));
                     }
                 }
                 else if (!isIntegrity)
@@ -201,7 +212,8 @@ namespace DeterministicChaos.Content.SoulTraits.Armor
                     dotTimer = DotDuration;
 
                     // Heal back the direct hit (minus 1 so it still registers)
-                    Player.statLife += info.Damage - 1;
+                    int healAmount = Player.GetModPlayer<PrefixEffectPlayer>().ScaleHeal(info.Damage - 1);
+                    Player.statLife += healAmount;
                     if (Player.statLife > Player.statLifeMax2)
                         Player.statLife = Player.statLifeMax2;
                 }

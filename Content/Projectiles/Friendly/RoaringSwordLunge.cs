@@ -10,7 +10,18 @@ using Terraria.ID;
 using Terraria.ModLoader;
 using DeterministicChaos.Content.Buffs;
 using DeterministicChaos.Content.Items;
+using DeterministicChaos.Content.Items.Accessories;
+using DeterministicChaos.Content.Items.BossBags;
+using DeterministicChaos.Content.Items.BossSummons;
+using DeterministicChaos.Content.Items.Consumables;
+using DeterministicChaos.Content.Items.DamageClasses;
+using DeterministicChaos.Content.Items.Globals;
+using DeterministicChaos.Content.Items.Materials;
+using DeterministicChaos.Content.Items.Placeable;
+using DeterministicChaos.Content.Items.Rarities;
+using DeterministicChaos.Content.Items.Weapons;
 using DeterministicChaos.Content.Items.Armor;
+using DeterministicChaos.Content.Items.Imbued;
 using DeterministicChaos.Content.VFX;
 
 namespace DeterministicChaos.Content.Projectiles.Friendly
@@ -217,6 +228,12 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
             Texture2D texture = TextureAssets.Projectile[ModContent.ProjectileType<RoaringSwordSwing>()].Value;
             if (texture == null)
                 return false;
+
+            // Imbued Willbreaker trait tint
+            Color traitTint = Color.White;
+            var sp = player.GetModPlayer<RoaringSwordPlayer>();
+            if (sp.isHoldingWillbreaker)
+                traitTint = ImbuedTraitColor.FromZeroDetermination(sp.imbuedWillbreakerVariant);
                 
             Vector2 origin = new Vector2(texture.Width * 0.5f, texture.Height);
             
@@ -250,7 +267,7 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
                     texture,
                     afterimagePositions[i] + thrustOffset + handOffset - Main.screenPosition,
                     null,
-                    Color.White * alpha,
+                    traitTint * alpha,
                     afterimageRotation,
                     origin,
                     scale,
@@ -260,6 +277,7 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
             }
             
             Color glowColor = Color.Lerp(Color.Purple, Color.White, ChargePercent * 0.5f) * (0.4f + ChargePercent * 0.3f);
+            glowColor = ImbuedTraitColor.Multiply(glowColor, traitTint);
             for (int i = 0; i < 4; i++)
             {
                 Vector2 offset = new Vector2(2f + ChargePercent * 2f, 0f).RotatedBy(i * MathHelper.PiOver2);
@@ -280,7 +298,7 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
                 texture,
                 player.Center + thrustOffset + handOffset - Main.screenPosition,
                 null,
-                Color.White,
+                traitTint,
                 drawRotation,
                 origin,
                 drawScale,

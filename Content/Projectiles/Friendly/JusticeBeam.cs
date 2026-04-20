@@ -7,6 +7,16 @@ using Terraria.GameContent;
 using Terraria.ID;
 using Terraria.ModLoader;
 using DeterministicChaos.Content.Items;
+using DeterministicChaos.Content.Items.Accessories;
+using DeterministicChaos.Content.Items.BossBags;
+using DeterministicChaos.Content.Items.BossSummons;
+using DeterministicChaos.Content.Items.Consumables;
+using DeterministicChaos.Content.Items.DamageClasses;
+using DeterministicChaos.Content.Items.Globals;
+using DeterministicChaos.Content.Items.Materials;
+using DeterministicChaos.Content.Items.Placeable;
+using DeterministicChaos.Content.Items.Rarities;
+using DeterministicChaos.Content.Items.Weapons;
 
 namespace DeterministicChaos.Content.Projectiles.Friendly
 {
@@ -94,6 +104,9 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
         {
             // Guaranteed critical hit
             modifiers.SetCrit();
+            // Hypercrit flag (set by ImbuedStatic Justice variant): 1.5x damage on top of crit = 3x total
+            if (Projectile.localAI[1] >= 1f)
+                modifiers.FinalDamage *= 1.5f;
         }
 
         public override void OnHitNPC(NPC target, NPC.HitInfo hit, int damageDone)
@@ -118,6 +131,25 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
             
             // Also apply the tag debuff for visual effect and bonus damage
             target.AddBuff(ModContent.BuffType<HollowGunTagDebuff>(), 300);
+
+            // Hypercrit VFX/SFX (used by ImbuedStatic Justice variant)
+            if (Projectile.localAI[1] >= 1f)
+            {
+                for (int i = 0; i < 25; i++)
+                {
+                    Vector2 vel = Main.rand.NextVector2CircularEdge(8f, 8f);
+                    Dust dust = Dust.NewDustPerfect(target.Center, DustID.YellowTorch, vel, 0, default, 2f);
+                    dust.noGravity = true;
+                }
+                CombatText.NewText(target.Hitbox, new Color(255, 255, 50), damageDone, dramatic: true);
+                SoundEngine.PlaySound(new Terraria.Audio.SoundStyle("DeterministicChaos/Assets/Sounds/Hypercrit") { Volume = 0.6f }, target.Center);
+
+                if (owner.armor[0].type == ModContent.ItemType<global::DeterministicChaos.Content.SoulTraits.Armor.SheriffHat>())
+                {
+                    var hatPlayer = owner.GetModPlayer<global::DeterministicChaos.Content.SoulTraits.Armor.CowboyHatPlayer>();
+                    hatPlayer.hypercritAttackSpeedTimer = 36;
+                }
+            }
         }
 
         public override bool PreDraw(ref Color lightColor)

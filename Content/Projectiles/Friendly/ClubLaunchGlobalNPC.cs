@@ -4,10 +4,10 @@ using Terraria.ModLoader;
 
 namespace DeterministicChaos.Content.Projectiles.Friendly
 {
-    /// <summary>
-    /// GlobalNPC that enforces upward launch velocity AFTER an NPC's own AI runs,
-    /// preventing grounded enemies from immediately canceling the launch.
-    /// </summary>
+    
+    // GlobalNPC that enforces upward launch velocity AFTER an NPC's own AI runs,
+    // preventing grounded enemies from immediately canceling the launch.
+    
     public class ClubLaunchGlobalNPC : GlobalNPC
     {
         private const float LaunchSpeedY = -10f;
@@ -57,9 +57,9 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
             launchedNPCs.Remove(npc.whoAmI);
         }
 
-        /// <summary>
-        /// Clear all tracked launches (e.g. on world unload).
-        /// </summary>
+        
+        // Clear all tracked launches (e.g. on world unload).
+        
         public static void ClearAll()
         {
             launchedNPCs.Clear();

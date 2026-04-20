@@ -1,0 +1,52 @@
+using Microsoft.Xna.Framework;
+using Terraria;
+using Terraria.ModLoader;
+using DeterministicChaos.Content.Buffs;
+using DeterministicChaos.Content.Projectiles.Friendly;
+using DeterministicChaos.Content.Items.Accessories;
+using DeterministicChaos.Content.Items.BossBags;
+using DeterministicChaos.Content.Items.BossSummons;
+using DeterministicChaos.Content.Items.Consumables;
+using DeterministicChaos.Content.Items.DamageClasses;
+using DeterministicChaos.Content.Items.Globals;
+using DeterministicChaos.Content.Items.Materials;
+using DeterministicChaos.Content.Items.Placeable;
+using DeterministicChaos.Content.Items.Rarities;
+using DeterministicChaos.Content.Items.Weapons;
+
+namespace DeterministicChaos.Content.Items.Accessories
+{
+    public class TitanStarPlayer : ModPlayer
+    {
+        public bool TitanStarActive;
+
+        public override void ResetEffects()
+        {
+            TitanStarActive = false;
+        }
+
+        public override void PostUpdate()
+        {
+            if (!Player.HasBuff(ModContent.BuffType<TitanStarBuff>()))
+                return;
+
+            TitanStarActive = true;
+
+            if (Player.whoAmI != Main.myPlayer)
+                return;
+
+            int starType = ModContent.ProjectileType<TitanStarProjectile>();
+            if (Player.ownedProjectileCounts[starType] <= 0)
+            {
+                Projectile.NewProjectile(
+                    Player.GetSource_Misc("TitanStar"),
+                    Player.Center,
+                    Vector2.Zero,
+                    starType,
+                    0,
+                    0f,
+                    Player.whoAmI);
+            }
+        }
+    }
+}

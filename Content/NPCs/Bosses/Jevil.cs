@@ -12,6 +12,16 @@ using System.IO;
 using System.Reflection;
 using DeterministicChaos.Content.Projectiles.Enemy;
 using DeterministicChaos.Content.Systems;
+using DeterministicChaos.Content.Items.Accessories;
+using DeterministicChaos.Content.Items.BossBags;
+using DeterministicChaos.Content.Items.BossSummons;
+using DeterministicChaos.Content.Items.Consumables;
+using DeterministicChaos.Content.Items.DamageClasses;
+using DeterministicChaos.Content.Items.Globals;
+using DeterministicChaos.Content.Items.Materials;
+using DeterministicChaos.Content.Items.Placeable;
+using DeterministicChaos.Content.Items.Rarities;
+using DeterministicChaos.Content.Items.Weapons;
 
 namespace DeterministicChaos.Content.NPCs.Bosses
 {
@@ -1588,8 +1598,8 @@ namespace DeterministicChaos.Content.NPCs.Bosses
         public override void ModifyNPCLoot(NPCLoot npcLoot)
         {
             // Boss bag (Expert/Master/Revengeance/Death)
-            var bagRule = new LeadingConditionRule(new Items.BagDropCondition());
-            bagRule.OnSuccess(ItemDropRule.Common(ModContent.ItemType<Items.JevilBossBag>()));
+            var bagRule = new LeadingConditionRule(new BagDropCondition());
+            bagRule.OnSuccess(ItemDropRule.Common(ModContent.ItemType<JevilBossBag>()));
             npcLoot.Add(bagRule);
 
             // Trophy (10% chance on any difficulty)
@@ -1599,25 +1609,25 @@ namespace DeterministicChaos.Content.NPCs.Bosses
             npcLoot.Add(ItemDropRule.MasterModeCommonDrop(ModContent.ItemType<Trophies.JevilRelic>()));
 
             // Normal mode direct drops (bag handles Expert+/Rev+)
-            var directDrop = new LeadingConditionRule(new Items.DirectDropCondition());
+            var directDrop = new LeadingConditionRule(new DirectDropCondition());
 
             directDrop.OnSuccess(ItemDropRule.OneFromOptions(1,
-                ModContent.ItemType<Items.DeckOfCards>(),
-                ModContent.ItemType<Items.OopsAllCrits>()));
+                ModContent.ItemType<DeckOfCards>(),
+                ModContent.ItemType<OopsAllCrits>()));
 
             // 1 guaranteed weapon + 50% chance of a second
             int[] weaponPool = new int[]
             {
-                ModContent.ItemType<Items.Devilsknife>(),
-                ModContent.ItemType<Items.AceOfSpades>(),
-                ModContent.ItemType<Items.QueenOfDiamonds>(),
-                ModContent.ItemType<Items.KingOfHearts>(),
-                ModContent.ItemType<Items.JackOfClubs>()
+                ModContent.ItemType<Devilsknife>(),
+                ModContent.ItemType<AceOfSpades>(),
+                ModContent.ItemType<QueenOfDiamonds>(),
+                ModContent.ItemType<KingOfHearts>(),
+                ModContent.ItemType<JackOfClubs>()
             };
             directDrop.OnSuccess(ItemDropRule.OneFromOptions(1, weaponPool));
             directDrop.OnSuccess(ItemDropRule.OneFromOptions(2, weaponPool));
 
-            directDrop.OnSuccess(ItemDropRule.ByCondition(new Items.HasSoulTraitCondition(), ModContent.ItemType<Items.Soulflicker>(), 1));
+            directDrop.OnSuccess(ItemDropRule.ByCondition(new HasSoulTraitCondition(), ModContent.ItemType<Soulflicker>(), 1));
 
             npcLoot.Add(directDrop);
         }

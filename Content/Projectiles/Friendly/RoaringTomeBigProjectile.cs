@@ -1,9 +1,24 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using System;
 using Terraria;
 using Terraria.Audio;
 using Terraria.ID;
 using Terraria.ModLoader;
+using DeterministicChaos.Content.Items;
+using DeterministicChaos.Content.Items.Accessories;
+using DeterministicChaos.Content.Items.BossBags;
+using DeterministicChaos.Content.Items.BossSummons;
+using DeterministicChaos.Content.Items.Consumables;
+using DeterministicChaos.Content.Items.DamageClasses;
+using DeterministicChaos.Content.Items.Globals;
+using DeterministicChaos.Content.Items.Materials;
+using DeterministicChaos.Content.Items.Placeable;
+using DeterministicChaos.Content.Items.Rarities;
+using DeterministicChaos.Content.Items.Weapons;
+using DeterministicChaos.Content.Items.Imbued;
+using DeterministicChaos.Content.Items.Prefixes;
+using DeterministicChaos.Content.SoulTraits.Armor;
 
 namespace DeterministicChaos.Content.Projectiles.Friendly
 {
@@ -13,6 +28,9 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
         public int absorbedStars = 0;
         public int bonusDamage = 10;
         private bool hasExploded = false;
+
+        // Kindness: tracked ally index
+        private int kindnessAllyIndex = -1;
 
         public override void SetStaticDefaults()
         {
@@ -41,8 +59,21 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
             absorbedStars++;
             bonusDamage += 1;
 
+            // Check variant for reduced contribution
+            Player owner = Main.player[Projectile.owner];
+            var tomePlayer = owner.GetModPlayer<RoaringTomePlayer>();
+            float scaleGain = 0.15f;
+            int damageGain = starDamage;
+
+            // Perseverance: 30% less contribution to orb size and damage
+            if (tomePlayer.imbuedClarityVariant == ImbuedClarityVariant.Perseverance)
+            {
+                scaleGain *= 0.7f;
+                damageGain = (int)(damageGain * 0.7f);
+            }
+
             // Increase size
-            Projectile.scale += 0.15f;
+            Projectile.scale += scaleGain;
             if (Projectile.scale > 6f)
                 Projectile.scale = 6f;
 
@@ -62,10 +93,35 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
             }
 
             // Update damage
-            Projectile.damage += (int)(starDamage);
+            Projectile.damage += damageGain;
             if(absorbedStars < 8)
             {
                 Projectile.damage += (int)(Projectile.damage * 0.07);
+            }
+
+            // Kindness: heal tracked ally on each absorption
+            if (tomePlayer.imbuedClarityVariant == ImbuedClarityVariant.Kindness && kindnessAllyIndex >= 0 && kindnessAllyIndex < Main.maxPlayers)
+            {
+                Player ally = Main.player[kindnessAllyIndex];
+                if (ally.active && !ally.dead && ally.statLife < ally.statLifeMax2)
+                {
+                    int healAmount = 2;
+
+                    var prefixPlayer = owner.GetModPlayer<PrefixEffectPlayer>();
+                    healAmount = prefixPlayer.ScaleHeal(healAmount);
+
+                    var emblemPlayer = owner.GetModPlayer<ImbuedEmblemPlayer>();
+                    if (emblemPlayer.hasKindnessEmblem)
+                        healAmount = (int)(healAmount * 1.25f);
+
+                    if (healAmount > 0)
+                    {
+                        ally.statLife = Math.Min(ally.statLife + healAmount, ally.statLifeMax2);
+                        ally.HealEffect(healAmount);
+                    }
+
+                    RoaringGunPlayer.NotifyAllyHealed(Projectile.owner);
+                }
             }
 
             // Update hitbox size based on scale
@@ -80,6 +136,16 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
         {
             // static rotation
             Projectile.rotation = 0f;
+
+            Player owner = Main.player[Projectile.owner];
+            var tomePlayer = owner.GetModPlayer<RoaringTomePlayer>();
+            var variant = tomePlayer.imbuedClarityVariant;
+
+            // Kindness/Bravery: no tile collision
+            if (variant == ImbuedClarityVariant.Kindness || variant == ImbuedClarityVariant.Bravery)
+                Projectile.tileCollide = false;
+            else
+                Projectile.tileCollide = true;
 
             // Frame animation, faster based on speed
             float speed = Projectile.velocity.Length();
@@ -126,35 +192,108 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
             }
 
             float enemySeekRadius = 2600f;
-            NPC nearestEnemy = null;
-            float nearestEnemyDist = enemySeekRadius;
 
-            for (int i = 0; i < Main.maxNPCs; i++)
+            // Bravery: always follow the player instead of enemies
+            if (variant == ImbuedClarityVariant.Bravery)
             {
-                NPC npc = Main.npc[i];
-                if (npc.active && !npc.friendly && !npc.dontTakeDamage && npc.CanBeChasedBy())
+                Vector2 direction = (owner.Center - Projectile.Center);
+                if (direction.Length() > 40f)
                 {
-                    float distance = Vector2.Distance(Projectile.Center, npc.Center);
-                    if (distance < nearestEnemyDist)
+                    direction.Normalize();
+                    float turnStr = 0.18f + (Projectile.scale - 1f) * 0.50f;
+                    float currentSpeed = System.Math.Max(Projectile.velocity.Length(), 3f);
+                    Vector2 desiredVelocity = direction * currentSpeed;
+                    Projectile.velocity = Vector2.Lerp(Projectile.velocity, desiredVelocity, turnStr);
+                }
+            }
+            // Kindness: track to one nearby ally; fall back to the owner if no ally is around
+            else if (variant == ImbuedClarityVariant.Kindness)
+            {
+                // Pick ally if none tracked
+                if (kindnessAllyIndex < 0 || kindnessAllyIndex >= Main.maxPlayers ||
+                    !Main.player[kindnessAllyIndex].active || Main.player[kindnessAllyIndex].dead)
+                {
+                    kindnessAllyIndex = -1;
+                    float closestDist = 2600f;
+                    for (int i = 0; i < Main.maxPlayers; i++)
                     {
-                        nearestEnemyDist = distance;
-                        nearestEnemy = npc;
+                        if (i == Projectile.owner) continue;
+                        Player ally = Main.player[i];
+                        if (!ally.active || ally.dead) continue;
+                        if (ally.team != owner.team || owner.team == 0) continue;
+
+                        float dist = Vector2.Distance(Projectile.Center, ally.Center);
+                        if (dist < closestDist)
+                        {
+                            closestDist = dist;
+                            kindnessAllyIndex = i;
+                        }
+                    }
+                }
+
+                // Steer toward tracked ally, or fall back to the owner
+                Player followTarget = (kindnessAllyIndex >= 0) ? Main.player[kindnessAllyIndex] : owner;
+                Vector2 direction = (followTarget.Center - Projectile.Center);
+                if (direction.Length() > 40f)
+                {
+                    direction.Normalize();
+                    float turnStr = 0.18f + (Projectile.scale - 1f) * 0.50f;
+                    float currentSpeed = System.Math.Max(Projectile.velocity.Length(), 3f);
+                    Vector2 desiredVelocity = direction * currentSpeed;
+                    Projectile.velocity = Vector2.Lerp(Projectile.velocity, desiredVelocity, turnStr);
+                }
+            }
+            else
+            {
+                // Default enemy seeking
+                NPC nearestEnemy = null;
+                float nearestEnemyDist = enemySeekRadius;
+
+                for (int i = 0; i < Main.maxNPCs; i++)
+                {
+                    NPC npc = Main.npc[i];
+                    if (npc.active && !npc.friendly && !npc.dontTakeDamage && npc.CanBeChasedBy())
+                    {
+                        float distance = Vector2.Distance(Projectile.Center, npc.Center);
+                        if (distance < nearestEnemyDist)
+                        {
+                            nearestEnemyDist = distance;
+                            nearestEnemy = npc;
+                        }
+                    }
+                }
+
+                if (nearestEnemy != null)
+                {
+                    Vector2 direction = (nearestEnemy.Center - Projectile.Center);
+                    if (direction.Length() > 0)
+                    {
+                        direction.Normalize();
+                        float enemyTurnStrength = 0.18f + (Projectile.scale - 1f) * 0.50f;
+                        float currentSpeed = System.Math.Max(Projectile.velocity.Length(), 3f);
+                        Vector2 desiredVelocity = direction * currentSpeed;
+                        Projectile.velocity = Vector2.Lerp(Projectile.velocity, desiredVelocity, enemyTurnStrength);
                     }
                 }
             }
 
-            // Steer toward nearest enemy, turn strength scales with size
-            if (nearestEnemy != null)
+            // Integrity: grant 10% DR to allies near the orb
+            if (variant == ImbuedClarityVariant.Integrity)
             {
-                Vector2 direction = (nearestEnemy.Center - Projectile.Center);
-                if (direction.Length() > 0)
+                float drRange = 300f;
+                for (int i = 0; i < Main.maxPlayers; i++)
                 {
-                    direction.Normalize();
-                    float enemyTurnStrength = 0.18f + (Projectile.scale - 1f) * 0.50f;
-                    float currentSpeed = System.Math.Max(Projectile.velocity.Length(), 3f);
-                    Vector2 desiredVelocity = direction * currentSpeed;
-                    Projectile.velocity = Vector2.Lerp(Projectile.velocity, desiredVelocity, enemyTurnStrength);
+                    if (i == Projectile.owner) continue;
+                    Player ally = Main.player[i];
+                    if (!ally.active || ally.dead) continue;
+                    if (ally.team != owner.team || owner.team == 0) continue;
+
+                    if (Vector2.Distance(Projectile.Center, ally.Center) < drRange)
+                        ally.endurance += 0.10f;
                 }
+                // Also grant to owner
+                if (Vector2.Distance(Projectile.Center, owner.Center) < drRange)
+                    owner.endurance += 0.10f;
             }
 
             // Pulsing effect, faster based on size and speed
@@ -193,11 +332,25 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
             // Light based on size
             float lightIntensity = 0.5f + Projectile.scale * 0.2f;
             Lighting.AddLight(Projectile.Center, lightIntensity * 0.5f, lightIntensity * 0.2f, lightIntensity * 0.6f);
+
+            // Hard speed cap — prevent the orb from moving so fast it clips through the world.
+            const float MaxSpeed = 16f;
+            float curSpeed = Projectile.velocity.Length();
+            if (curSpeed > MaxSpeed)
+                Projectile.velocity = Projectile.velocity * (MaxSpeed / curSpeed);
+        }
+
+        // Justice: guaranteed crit + hypercrit chance conversion
+        public override void ModifyHitNPC(NPC target, ref NPC.HitModifiers modifiers)
+        {
+            // Direct contact damage is suppressed; the explosion (in OnHitNPC) is the sole damage source.
+            // This prevents the same target from being hit twice (contact + AoE).
+            modifiers.FinalDamage *= 0f;
         }
 
         public override void OnHitNPC(NPC target, NPC.HitInfo hit, int damageDone)
         {
-            // Explode on hit
+            // Explode on hit (explosion handles all damage, crits, and Justice hypercrit)
             Explode();
         }
 
@@ -246,6 +399,13 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
             
             int explosionDamage = Projectile.damage;
 
+            // Check for Justice variant
+            var tomePlayer = player.GetModPlayer<RoaringTomePlayer>();
+            bool isJustice = tomePlayer.imbuedClarityVariant == ImbuedClarityVariant.Justice;
+            bool isPatience = tomePlayer.imbuedClarityVariant == ImbuedClarityVariant.Patience;
+            int totalDamageDealt = 0;
+            bool didJusticeHypercrit = false;
+
             // Only the owner deals damage to prevent duplicates in multiplayer
             if (Projectile.owner == Main.myPlayer)
             {
@@ -261,14 +421,32 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
                             float damageMult = 1f - (distance / explosionRadius) * 0.5f;
                             int finalDamage = (int)(explosionDamage * damageMult);
 
+                            bool isCrit;
+                            if (isJustice)
+                            {
+                                isCrit = true;
+                                // Roll hypercrit
+                                float hypercritChance = player.GetTotalCritChance(DamageClass.Magic);
+                                if (Main.rand.Next(100) < (int)hypercritChance)
+                                {
+                                    finalDamage = (int)(finalDamage * 1.5f);
+                                    didJusticeHypercrit = true;
+                                }
+                            }
+                            else
+                            {
+                                isCrit = Main.rand.Next(100) < player.GetCritChance(DamageClass.Magic);
+                            }
+
                             NPC.HitInfo hitInfo = new NPC.HitInfo
                             {
                                 Damage = finalDamage,
                                 Knockback = 8f * Projectile.scale,
                                 HitDirection = Projectile.Center.X < npc.Center.X ? 1 : -1,
-                                Crit = Main.rand.Next(100) < player.GetCritChance(DamageClass.Magic)
+                                Crit = isCrit
                             };
                             npc.StrikeNPC(hitInfo);
+                            totalDamageDealt += finalDamage;
 
                             // Sync the hit to other clients in multiplayer
                             if (Main.netMode != NetmodeID.SinglePlayer)
@@ -277,6 +455,28 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
                             }
                         }
                     }
+                }
+
+                // Justice hypercrit VFX/SFX
+                if (didJusticeHypercrit)
+                {
+                    for (int i = 0; i < 25; i++)
+                    {
+                        Vector2 vel = Main.rand.NextVector2CircularEdge(8f, 8f);
+                        Dust dust = Dust.NewDustPerfect(Projectile.Center, DustID.YellowTorch, vel, 0, default, 2f);
+                        dust.noGravity = true;
+                    }
+                    SoundEngine.PlaySound(new SoundStyle("DeterministicChaos/Assets/Sounds/Hypercrit") { Volume = 0.6f }, Projectile.Center);
+
+                    var hatPlayer = player.GetModPlayer<CowboyHatPlayer>();
+                    if (hatPlayer.hasSheriffHat)
+                        hatPlayer.hypercritAttackSpeedTimer = 36;
+                }
+
+                // Patience: grant rogue stealth based on damage dealt by the explosion
+                if (isPatience && totalDamageDealt > 0)
+                {
+                    tomePlayer.GrantPatienceStealth(totalDamageDealt);
                 }
             }
 
@@ -340,6 +540,16 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
             Rectangle frameRect = new Rectangle(0, Projectile.frame * frameHeight, texture.Width, frameHeight);
             Vector2 origin = new Vector2(texture.Width * 0.5f, frameHeight * 0.5f);
 
+            // Imbued Clarity trait tint
+            Color traitTint = Color.White;
+            Player owner = Main.player[Projectile.owner];
+            if (owner != null && owner.active)
+            {
+                var tp = owner.GetModPlayer<RoaringTomePlayer>();
+                if (tp.isHoldingClarity)
+                    traitTint = ImbuedTraitColor.FromNoneFirst((int)tp.imbuedClarityVariant);
+            }
+
             // Draw proper afterimages, offset to sprite center (66x66 frames)
             // since Resize() keeps center consistent but changes Projectile.Size
             for (int i = Projectile.oldPos.Length - 1; i >= 0; i--)
@@ -349,13 +559,13 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
                 Vector2 drawPos = Projectile.oldPos[i] + new Vector2(33, 33) - Main.screenPosition;
                 float progress = i / (float)Projectile.oldPos.Length;
                 float trailScale = Projectile.scale * (1f - progress * 0.5f);
-                Color trailColor = Color.White * (1f - progress) * 0.6f;
+                Color trailColor = ImbuedTraitColor.Multiply(Color.White, traitTint) * (1f - progress) * 0.6f;
                 Main.EntitySpriteDraw(texture, drawPos, frameRect, trailColor, Projectile.oldRot[i], origin, trailScale, SpriteEffects.None, 0);
             }
 
             // Draw main sprite with same offset
             Vector2 mainDrawPos = Projectile.position + new Vector2(33, 33) - Main.screenPosition;
-            Main.EntitySpriteDraw(texture, mainDrawPos, frameRect, Color.White, Projectile.rotation, origin, Projectile.scale, SpriteEffects.None, 0);
+            Main.EntitySpriteDraw(texture, mainDrawPos, frameRect, traitTint, Projectile.rotation, origin, Projectile.scale, SpriteEffects.None, 0);
 
             return false;
         }

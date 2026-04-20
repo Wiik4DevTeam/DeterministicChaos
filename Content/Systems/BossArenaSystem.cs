@@ -558,8 +558,8 @@ namespace DeterministicChaos.Content.Systems
             {
                 p.position.Y = bottom - p.height;
 
-                // Only simulate ground contact when actually falling
-                if (p.velocity.Y > 0f)
+                // Always simulate ground contact on the invisible floor
+                if (p.velocity.Y >= 0f)
                 {
                     p.velocity.Y = 0f;
                     p.fallStart = (int)(p.position.Y / 16f);

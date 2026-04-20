@@ -1,12 +1,27 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using System;
 using Terraria;
 using Terraria.Audio;
 using Terraria.GameContent;
 using Terraria.ID;
 using Terraria.ModLoader;
 using DeterministicChaos.Content.Buffs;
+using DeterministicChaos.Content.Items;
+using DeterministicChaos.Content.Items.Accessories;
+using DeterministicChaos.Content.Items.BossBags;
+using DeterministicChaos.Content.Items.BossSummons;
+using DeterministicChaos.Content.Items.Consumables;
+using DeterministicChaos.Content.Items.DamageClasses;
+using DeterministicChaos.Content.Items.Globals;
+using DeterministicChaos.Content.Items.Materials;
+using DeterministicChaos.Content.Items.Placeable;
+using DeterministicChaos.Content.Items.Rarities;
+using DeterministicChaos.Content.Items.Weapons;
 using DeterministicChaos.Content.Items.Armor;
+using DeterministicChaos.Content.Items.Imbued;
+using DeterministicChaos.Content.Items.Prefixes;
+using DeterministicChaos.Content.SoulTraits.Armor;
 
 namespace DeterministicChaos.Content.Projectiles.Friendly
 {
@@ -99,9 +114,13 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
                 return;
                 
             hitAnyTarget = true;
+
+            Player player = Main.player[Projectile.owner];
+            var swordPlayer = player.GetModPlayer<RoaringSwordPlayer>();
+            int maxMarks = swordPlayer.willbreakerMaxMarks;
             
             RoaringSwordMarkGlobalNPC markNPC = target.GetGlobalNPC<RoaringSwordMarkGlobalNPC>();
-            bool hadFullMarks = markNPC.markStacks >= RoaringSwordMarkGlobalNPC.MaxStacks;
+            bool hadFullMarks = markNPC.markStacks >= maxMarks;
             
             markNPC.ClearMarks(target);
             
@@ -112,12 +131,34 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
                 hasTriggeredMarkSpread = true;
                 MarkNearbyEnemies(target);
             }
+
+            // Justice: Hypercrit VFX
+            if (swordPlayer.justiceHypercritPending)
+            {
+                swordPlayer.justiceHypercritPending = false;
+
+                for (int i = 0; i < 25; i++)
+                {
+                    Vector2 vel = Main.rand.NextVector2CircularEdge(8f, 8f);
+                    Dust dust = Dust.NewDustPerfect(target.Center, DustID.YellowTorch, vel, 0, default, 2f);
+                    dust.noGravity = true;
+                }
+                CombatText.NewText(target.Hitbox, new Color(255, 255, 50), damageDone, dramatic: true);
+                SoundEngine.PlaySound(new SoundStyle("DeterministicChaos/Assets/Sounds/Hypercrit") { Volume = 0.6f }, target.Center);
+
+                var hatPlayer = player.GetModPlayer<CowboyHatPlayer>();
+                if (hatPlayer.hasSheriffHat)
+                    hatPlayer.hypercritAttackSpeedTimer = 36;
+            }
         }
         
         private void MarkNearbyEnemies(NPC sourceNPC)
         {
             if (sourceNPC == null || !sourceNPC.active)
                 return;
+
+            Player player = Main.player[Projectile.owner];
+            int maxMarks = player.GetModPlayer<RoaringSwordPlayer>().willbreakerMaxMarks;
             
             // Break sound effect for clearing full marks
             SoundEngine.PlaySound(new SoundStyle("DeterministicChaos/Assets/Sounds/Break") { Volume = 0.9f }, sourceNPC.Center);
@@ -139,7 +180,8 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
                 if (dist <= MarkRadius)
                 {
                     RoaringSwordMarkGlobalNPC markNPC = npc.GetGlobalNPC<RoaringSwordMarkGlobalNPC>();
-                    markNPC.markStacks = RoaringSwordMarkGlobalNPC.MaxStacks;
+                    markNPC.markStacks = maxMarks;
+                    markNPC.currentMaxStacks = Math.Max(markNPC.currentMaxStacks, maxMarks);
                     npc.AddBuff(ModContent.BuffType<EyeDebuff>(), 360);
                     
                     // Play sound for full mark application
@@ -186,6 +228,9 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
             Player player = Main.player[Projectile.owner];
             if (player == null || !player.active || player.dead)
                 return;
+
+            var swordPlayer = player.GetModPlayer<RoaringSwordPlayer>();
+            int maxMarks = swordPlayer.willbreakerMaxMarks;
             
             float closestDist = MarkRadius;
             NPC closestTarget = null;
@@ -196,12 +241,10 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
                 if (!npc.active || npc.friendly || npc.dontTakeDamage || npc.immortal)
                     continue;
                 
-                // Only target enemies with FULL mark stacks (5)
                 RoaringSwordMarkGlobalNPC markNPC = npc.GetGlobalNPC<RoaringSwordMarkGlobalNPC>();
-                if (markNPC.markStacks < RoaringSwordMarkGlobalNPC.MaxStacks)
+                if (markNPC.markStacks < maxMarks)
                     continue;
                 
-                // Skip worm segments
                 if (npc.realLife >= 0 && npc.realLife != npc.whoAmI)
                     continue;
                     
@@ -215,7 +258,6 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
             
             if (closestTarget != null && closestTarget.active)
             {
-                // Reset player cooldown and spawn chain lunge
                 player.itemAnimation = 0;
                 player.itemTime = 0;
                 
@@ -233,20 +275,89 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
                     closestTarget.whoAmI
                 );
             }
+            else if (swordPlayer.imbuedWillbreakerVariant == (int)ImbuedWillbreakerVariant.Kindness)
+            {
+                // Kindness: If no more enemy targets, lunge to an ally to heal them
+                float closestAllyDist = MarkRadius;
+                int closestAllyIdx = -1;
+
+                for (int i = 0; i < Main.maxPlayers; i++)
+                {
+                    if (i == Projectile.owner) continue;
+                    Player ally = Main.player[i];
+                    if (!ally.active || ally.dead || ally.team != player.team || player.team == 0)
+                        continue;
+                    if (ally.statLife >= ally.statLifeMax2)
+                        continue;
+
+                    float dist = Vector2.Distance(player.Center, ally.Center);
+                    if (dist < closestAllyDist)
+                    {
+                        closestAllyDist = dist;
+                        closestAllyIdx = i;
+                    }
+                }
+
+                if (closestAllyIdx >= 0)
+                {
+                    player.itemAnimation = 0;
+                    player.itemTime = 0;
+
+                    Player ally = Main.player[closestAllyIdx];
+                    Vector2 direction = (ally.Center - player.Center).SafeNormalize(Vector2.UnitX);
+
+                    // Encode player target as 1000 + playerWhoAmI
+                    Projectile.NewProjectile(
+                        Projectile.GetSource_FromThis(),
+                        player.Center,
+                        direction,
+                        ModContent.ProjectileType<RoaringSwordChainLunge>(),
+                        Projectile.damage,
+                        Projectile.knockBack,
+                        Projectile.owner,
+                        0f,
+                        1000f + closestAllyIdx
+                    );
+                }
+            }
         }
 
         public override void ModifyHitNPC(NPC target, ref NPC.HitModifiers modifiers)
         {
+            Player player = Main.player[Projectile.owner];
+            var swordPlayer = player.GetModPlayer<RoaringSwordPlayer>();
+            int maxMarks = swordPlayer.willbreakerMaxMarks;
+            int variant = swordPlayer.imbuedWillbreakerVariant;
+
             RoaringSwordMarkGlobalNPC markNPC = target.GetGlobalNPC<RoaringSwordMarkGlobalNPC>();
             if (markNPC.markStacks > 0)
             {
-                float damageMultiplier = 1f + (markNPC.markStacks / (float)RoaringSwordMarkGlobalNPC.MaxStacks) * 6f;
+                float damageMultiplier = 1f + (markNPC.markStacks / (float)maxMarks) * 6f;
+
+                // Patience: +20% max damage
+                if (variant == (int)ImbuedWillbreakerVariant.Patience)
+                    damageMultiplier *= 1.2f;
+
                 modifiers.SourceDamage *= damageMultiplier;
                 
-                if (markNPC.markStacks >= RoaringSwordMarkGlobalNPC.MaxStacks)
+                if (markNPC.markStacks >= maxMarks)
                 {
                     modifiers.SetCrit();
                 }
+            }
+
+            // Justice: Lunge attacks always hypercrit (guaranteed crit + 1.5x damage = 3x total)
+            if (variant == (int)ImbuedWillbreakerVariant.Justice)
+            {
+                modifiers.SetCrit();
+                modifiers.FinalDamage *= 1.5f;
+                swordPlayer.justiceHypercritPending = true;
+            }
+
+            // Perseverance: Apply accumulated mana overcharge bonus
+            if (variant == (int)ImbuedWillbreakerVariant.Perseverance && swordPlayer.perseveranceManaBonus > 0f)
+            {
+                modifiers.SourceDamage *= 1f + swordPlayer.perseveranceManaBonus;
             }
         }
 
@@ -296,6 +407,16 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
             if (tex == null)
                 return false;
 
+            // Imbued Willbreaker trait tint
+            Color traitTint = Color.White;
+            Player owner = Main.player[Projectile.owner];
+            if (owner != null && owner.active)
+            {
+                var sp = owner.GetModPlayer<RoaringSwordPlayer>();
+                if (sp.isHoldingWillbreaker)
+                    traitTint = ImbuedTraitColor.FromZeroDetermination(sp.imbuedWillbreakerVariant);
+            }
+
             int frameWidth = tex.Width;
             int frameHeight = tex.Height / Frames;
 
@@ -313,21 +434,21 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
             
             Vector2 offset1 = -direction * 25f + perpendicular * 8f;
             Vector2 trailScale1 = drawScale * 0.85f;
-            Main.EntitySpriteDraw(tex, pos + offset1, src, Color.White * 0.4f, Projectile.rotation, origin, trailScale1, SpriteEffects.None, 0);
+            Main.EntitySpriteDraw(tex, pos + offset1, src, traitTint * 0.4f, Projectile.rotation, origin, trailScale1, SpriteEffects.None, 0);
             
             Vector2 offset2 = -direction * 20f - perpendicular * 6f;
             Vector2 trailScale2 = drawScale * 0.75f;
-            Main.EntitySpriteDraw(tex, pos + offset2, src, Color.White * 0.3f, Projectile.rotation, origin, trailScale2, SpriteEffects.None, 0);
+            Main.EntitySpriteDraw(tex, pos + offset2, src, traitTint * 0.3f, Projectile.rotation, origin, trailScale2, SpriteEffects.None, 0);
             
             Vector2 offset3 = -direction * 40f;
             Vector2 trailScale3 = drawScale * 0.6f;
-            Main.EntitySpriteDraw(tex, pos + offset3, src, Color.White * 0.2f, Projectile.rotation, origin, trailScale3, SpriteEffects.None, 0);
+            Main.EntitySpriteDraw(tex, pos + offset3, src, traitTint * 0.2f, Projectile.rotation, origin, trailScale3, SpriteEffects.None, 0);
             
             Vector2 offset4 = -direction * 35f + perpendicular * 12f;
             Vector2 trailScale4 = drawScale * 0.5f;
-            Main.EntitySpriteDraw(tex, pos + offset4, src, Color.White * 0.15f, Projectile.rotation, origin, trailScale4, SpriteEffects.None, 0);
+            Main.EntitySpriteDraw(tex, pos + offset4, src, traitTint * 0.15f, Projectile.rotation, origin, trailScale4, SpriteEffects.None, 0);
 
-            Color drawColor = Color.White;
+            Color drawColor = traitTint;
             Main.EntitySpriteDraw(tex, pos, src, drawColor, Projectile.rotation, origin, drawScale, SpriteEffects.None, 0);
             
             return false;

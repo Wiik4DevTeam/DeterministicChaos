@@ -10,11 +10,11 @@ using Terraria.ModLoader;
 
 namespace DeterministicChaos.Content.Projectiles.Friendly
 {
-    /// <summary>
-    /// Summon minion that renders two Titan hands flanking the player.
-    /// Hands fire lasers every 3 seconds at the nearest enemy or whip-tagged target.
-    /// Takes 2 minion slots; only one pair may be active at a time.
-    /// </summary>
+    
+    // Summon minion that renders two Titan hands flanking the player.
+    // Hands fire lasers every 3 seconds at the nearest enemy or whip-tagged target.
+    // Takes 2 minion slots; only one pair may be active at a time.
+    
     public class AppendageHandProjectile : ModProjectile
     {
         // ── Scale & positioning ──────────────────────────────────────
@@ -312,8 +312,8 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
                 Vector2 worldAnchor = handPos + (anchor * HAND_SCALE).RotatedBy(handRot);
 
                 Vector2 centerOff = isLeft
-                    ? new Vector2(FINGER_W / 2f, FINGER_H / 2f)
-                    : new Vector2(-FINGER_W / 2f, FINGER_H / 2f);
+                    ? new Vector2(-FINGER_W / 2f, 0f)
+                    : new Vector2(FINGER_W / 2f, 0f);
 
                 Vector2 fingerCenter = worldAnchor + (centerOff * HAND_SCALE).RotatedBy(handRot);
 

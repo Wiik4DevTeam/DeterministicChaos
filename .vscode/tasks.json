@@ -11,6 +11,39 @@
 				"-File",
 				"${workspaceFolder}\\_convert_summaries.ps1"
 			]
+		},
+		{
+			"label": "Reorganize Items Folder",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				"${workspaceFolder}\\_reorganize_items.ps1"
+			]
+		},
+		{
+			"label": "Fix Misplaced Usings",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				"${workspaceFolder}\\_fix_usings.ps1"
+			]
+		},
+		{
+			"label": "Fix Short-Form Refs",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				"${workspaceFolder}\\_fix_shortform_refs.ps1"
+			]
 		}
 	]
 }

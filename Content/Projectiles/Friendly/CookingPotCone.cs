@@ -5,6 +5,17 @@ using Terraria.Audio;
 using Terraria.ID;
 using Terraria.ModLoader;
 using DeterministicChaos.Content.Items;
+using DeterministicChaos.Content.Items.Accessories;
+using DeterministicChaos.Content.Items.BossBags;
+using DeterministicChaos.Content.Items.BossSummons;
+using DeterministicChaos.Content.Items.Consumables;
+using DeterministicChaos.Content.Items.DamageClasses;
+using DeterministicChaos.Content.Items.Globals;
+using DeterministicChaos.Content.Items.Materials;
+using DeterministicChaos.Content.Items.Placeable;
+using DeterministicChaos.Content.Items.Rarities;
+using DeterministicChaos.Content.Items.Weapons;
+using DeterministicChaos.Content.Items.Prefixes;
 
 namespace DeterministicChaos.Content.Projectiles.Friendly
 {
@@ -147,10 +158,15 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
                     if (isSelf || System.Math.Abs(angleDiff) <= halfAngle)
                     {
                         // Heal ally
+                        if (healAmount > 0 && !isSelf)
+                        {
+                            RoaringGunPlayer.NotifyAllyHealed(Projectile.owner);
+                        }
                         if (healAmount > 0 && !isSelf && target.statLife < target.statLifeMax2)
                         {
-                            target.HealEffect(healAmount);
-                            target.statLife += healAmount;
+                            int heal = owner.GetModPlayer<PrefixEffectPlayer>().ScaleHeal(healAmount);
+                            target.HealEffect(heal);
+                            target.statLife += heal;
                             if (target.statLife > target.statLifeMax2)
                                 target.statLife = target.statLifeMax2;
                         }

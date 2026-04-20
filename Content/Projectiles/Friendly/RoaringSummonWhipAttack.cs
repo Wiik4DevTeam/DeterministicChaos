@@ -140,8 +140,9 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
                         // Mark as hit so we don't hit again
                         hitNPCs.Add(n);
                         
-                        // Set minion target
-                        owner.MinionAttackTargetNPC = n;
+                        // Set minion target (only for base summon, not imbued clones)
+                        if (!IsImbuedClone())
+                            owner.MinionAttackTargetNPC = n;
                         
                         break;
                     }
@@ -151,11 +152,11 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
 
         private Vector2 GetAnchorPosition()
         {
-            // Get the current position of the parent clone
+            // Get the current position of the parent clone (base or imbued)
             if (parentCloneWhoAmI >= 0 && parentCloneWhoAmI < Main.maxProjectiles)
             {
                 Projectile clone = Main.projectile[parentCloneWhoAmI];
-                if (clone.active && clone.type == ModContent.ProjectileType<RoaringSummonProjectile>())
+                if (clone.active && clone.owner == Projectile.owner && clone.minion)
                 {
                     return clone.Center;
                 }
@@ -201,8 +202,20 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
         public override void OnHitNPC(NPC target, NPC.HitInfo hit, int damageDone)
         {
             // This may not be called since we handle damage manually, but keep for safety
-            Main.player[Projectile.owner].MinionAttackTargetNPC = target.whoAmI;
+            if (!IsImbuedClone())
+                Main.player[Projectile.owner].MinionAttackTargetNPC = target.whoAmI;
             hitNPCs.Add(target.whoAmI);
+        }
+
+        private bool IsImbuedClone()
+        {
+            if (parentCloneWhoAmI >= 0 && parentCloneWhoAmI < Main.maxProjectiles)
+            {
+                Projectile parent = Main.projectile[parentCloneWhoAmI];
+                if (parent.active && parent.owner == Projectile.owner && parent.ModProjectile is ImbuedSummonProjectile)
+                    return true;
+            }
+            return false;
         }
 
         public override bool? CanHitNPC(NPC target)

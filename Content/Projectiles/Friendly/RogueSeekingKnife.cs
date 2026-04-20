@@ -5,6 +5,17 @@ using Terraria.Audio;
 using Terraria.GameContent;
 using Terraria.ID;
 using Terraria.ModLoader;
+using DeterministicChaos.Content.Items.Imbued;
+using DeterministicChaos.Content.Items.Accessories;
+using DeterministicChaos.Content.Items.BossBags;
+using DeterministicChaos.Content.Items.BossSummons;
+using DeterministicChaos.Content.Items.Consumables;
+using DeterministicChaos.Content.Items.DamageClasses;
+using DeterministicChaos.Content.Items.Globals;
+using DeterministicChaos.Content.Items.Materials;
+using DeterministicChaos.Content.Items.Placeable;
+using DeterministicChaos.Content.Items.Rarities;
+using DeterministicChaos.Content.Items.Weapons;
 
 namespace DeterministicChaos.Content.Projectiles.Friendly
 {
@@ -27,9 +38,11 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
         private bool prevHasDashed = false;
         private float orbitAngle;
         private bool isVisible = true;
+        private int traitVariant;
         
         // ai[0] = target NPC index
         // ai[1] = orbit angle (passed from spawner for MP sync)
+        // localAI[0] = ImbuedDarkShardVariant (passed from spawner)
         
         public override void SetStaticDefaults()
         {
@@ -61,6 +74,7 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
             writer.Write(orbitAngle);
             writer.Write(Projectile.rotation);
             writer.Write(isVisible);
+            writer.Write(traitVariant);
         }
         
         public override void ReceiveExtraAI(System.IO.BinaryReader reader)
@@ -71,10 +85,27 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
             orbitAngle = reader.ReadSingle();
             Projectile.rotation = reader.ReadSingle();
             isVisible = reader.ReadBoolean();
+            traitVariant = reader.ReadInt32();
         }
         
+        private Color GetTraitColor()
+        {
+            return (ImbuedDarkShardVariant)traitVariant switch
+            {
+                ImbuedDarkShardVariant.Determination => new Color(255, 60, 60),
+                ImbuedDarkShardVariant.Integrity => new Color(0, 0, 255),
+                ImbuedDarkShardVariant.Patience => new Color(80, 255, 255),
+                ImbuedDarkShardVariant.Perseverance => new Color(255, 80, 255),
+                ImbuedDarkShardVariant.Kindness => new Color(80, 230, 80),
+                ImbuedDarkShardVariant.Justice => new Color(255, 255, 80),
+                ImbuedDarkShardVariant.Bravery => new Color(255, 190, 60),
+                _ => Color.White
+            };
+        }
+
         public override void OnSpawn(Terraria.DataStructures.IEntitySource source)
         {
+            traitVariant = (int)Projectile.localAI[0];
             int targetIndex = (int)Projectile.ai[0];
             
             // Use orbit angle from ai[1] (synced from spawner)
@@ -274,17 +305,18 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
             
             int elapsed = TotalLifetime - Projectile.timeLeft;
             
-            // Color based on phase
+            // Color based on trait variant
+            Color traitColor = GetTraitColor();
             Color drawColor;
             if (elapsed >= FollowTime)
             {
-                // White during stop and dash
-                drawColor = Color.White;
+                // Full trait color during stop and dash
+                drawColor = traitColor;
             }
             else
             {
-                // Gray/silver during follow
-                drawColor = new Color(200, 200, 220) * 0.9f;
+                // Dimmer trait color during follow
+                drawColor = traitColor * 0.7f;
             }
             
             // Growth animation

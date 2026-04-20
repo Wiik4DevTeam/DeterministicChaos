@@ -7,7 +7,19 @@ using Terraria.GameContent;
 using Terraria.ID;
 using Terraria.ModLoader;
 using DeterministicChaos.Content.Buffs;
+using DeterministicChaos.Content.Items;
+using DeterministicChaos.Content.Items.Accessories;
+using DeterministicChaos.Content.Items.BossBags;
+using DeterministicChaos.Content.Items.BossSummons;
+using DeterministicChaos.Content.Items.Consumables;
+using DeterministicChaos.Content.Items.DamageClasses;
+using DeterministicChaos.Content.Items.Globals;
+using DeterministicChaos.Content.Items.Materials;
+using DeterministicChaos.Content.Items.Placeable;
+using DeterministicChaos.Content.Items.Rarities;
+using DeterministicChaos.Content.Items.Weapons;
 using DeterministicChaos.Content.Items.Armor;
+using DeterministicChaos.Content.Items.Imbued;
 
 namespace DeterministicChaos.Content.Projectiles.Friendly
 {
@@ -193,16 +205,20 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
             if (target == null || !target.active)
                 return;
             
+            Player player = Main.player[Projectile.owner];
+            var swordPlayer = player.GetModPlayer<RoaringSwordPlayer>();
+            int maxMarks = swordPlayer.willbreakerMaxMarks;
+
             RoaringSwordMarkGlobalNPC markNPC = target.GetGlobalNPC<RoaringSwordMarkGlobalNPC>();
             int previousStacks = markNPC.markStacks;
             
-            markNPC.AddMark(target, 1);
+            markNPC.AddMark(target, 1, maxMarks);
             
             // Sync mark changes in multiplayer
             if (Main.netMode != NetmodeID.SinglePlayer)
                 target.netUpdate = true;
             
-            if (previousStacks < RoaringSwordMarkGlobalNPC.MaxStacks && markNPC.markStacks >= RoaringSwordMarkGlobalNPC.MaxStacks)
+            if (previousStacks < maxMarks && markNPC.markStacks >= maxMarks)
             {
                 SoundEngine.PlaySound(SoundID.NPCDeath6 with { Volume = 0.7f, Pitch = 0.6f }, target.Center);
                 
@@ -246,6 +262,12 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
             Texture2D swordTexture = TextureAssets.Projectile[Type].Value;
             if (swordTexture == null)
                 return false;
+
+            // Imbued Willbreaker trait tint
+            Color traitTint = Color.White;
+            var sp = player.GetModPlayer<RoaringSwordPlayer>();
+            if (sp.isHoldingWillbreaker)
+                traitTint = ImbuedTraitColor.FromZeroDetermination(sp.imbuedWillbreakerVariant);
             
             if (timer < SwingDuration)
             {
@@ -280,7 +302,7 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
                     swordTexture,
                     drawPos,
                     null,
-                    Color.White * alpha,
+                    traitTint * alpha,
                     afterimageRotation,
                     swordOrigin,
                     scale,
@@ -293,7 +315,7 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
                 swordTexture,
                 drawPos,
                 null,
-                Color.White,
+                traitTint,
                 drawRotation,
                 swordOrigin,
                 Projectile.scale,

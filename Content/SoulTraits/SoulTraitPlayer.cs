@@ -8,6 +8,19 @@ using Terraria.GameContent.Achievements;
 using Terraria.ID;
 using Terraria.ModLoader;
 using Terraria.ModLoader.IO;
+using DeterministicChaos.Content.Items;
+using DeterministicChaos.Content.Items.Accessories;
+using DeterministicChaos.Content.Items.BossBags;
+using DeterministicChaos.Content.Items.BossSummons;
+using DeterministicChaos.Content.Items.Consumables;
+using DeterministicChaos.Content.Items.DamageClasses;
+using DeterministicChaos.Content.Items.Globals;
+using DeterministicChaos.Content.Items.Materials;
+using DeterministicChaos.Content.Items.Placeable;
+using DeterministicChaos.Content.Items.Rarities;
+using DeterministicChaos.Content.Items.Weapons;
+using DeterministicChaos.Content.Items.Imbued;
+using DeterministicChaos.Content.Items.Prefixes;
 using DeterministicChaos.Content.SoulTraits.Buffs;
 
 namespace DeterministicChaos.Content.SoulTraits
@@ -40,6 +53,7 @@ namespace DeterministicChaos.Content.SoulTraits
         public const int PatienceMarkInterval = 1800;
 
         public bool IntegrityMarkActive = false;
+        public int IntegrityMarkHitsRemaining = 0;
 
         public bool PerseveranceMarkActive = false;
 
@@ -79,6 +93,7 @@ namespace DeterministicChaos.Content.SoulTraits
             PatienceMarkStacks = 0;
             PatienceNoDamageTimer = 0;
             IntegrityMarkActive = false;
+            IntegrityMarkHitsRemaining = 0;
             PerseveranceMarkActive = false;
             DeterminationMarkActive = false;
             DeterminationCooldown = 0;
@@ -266,22 +281,29 @@ namespace DeterministicChaos.Content.SoulTraits
             if (CurrentTrait == SoulTraitType.Patience && TotalInvestment >= 20)
             {
                 PatienceNoDamageTimer++;
-                if (PatienceNoDamageTimer >= PatienceMarkInterval)
+                // Patience Emblem reduces interval by 10 seconds (600 ticks)
+                int interval = Player.GetModPlayer<ImbuedEmblemPlayer>().hasPatienceEmblem
+                    ? PatienceMarkInterval - 600
+                    : PatienceMarkInterval;
+                if (PatienceNoDamageTimer >= interval)
                 {
                     PatienceMarkStacks++;
                     PatienceNoDamageTimer = 0;
                 }
             }
 
-            // Perseverance mark activation at full health
+            // Perseverance mark activation at full health (or any health with emblem)
             if (CurrentTrait == SoulTraitType.Perseverance && TotalInvestment >= 20)
             {
-                if (Player.statLife >= Player.statLifeMax2 && Player.statMana > 0 && !PerseveranceMarkActive)
+                bool hasEmblem = Player.GetModPlayer<ImbuedEmblemPlayer>().hasPerseveranceEmblem;
+                bool healthCheck = hasEmblem || Player.statLife >= Player.statLifeMax2;
+
+                if (healthCheck && Player.statMana > 0 && !PerseveranceMarkActive)
                 {
                     PerseveranceMarkActive = true;
                 }
-                // Deactivate mark if no longer at full health or no mana
-                else if (PerseveranceMarkActive && (Player.statLife < Player.statLifeMax2 || Player.statMana <= 0))
+                // Deactivate mark if health/mana conditions no longer met
+                else if (PerseveranceMarkActive && (!healthCheck || Player.statMana <= 0))
                 {
                     PerseveranceMarkActive = false;
                 }
@@ -333,6 +355,12 @@ namespace DeterministicChaos.Content.SoulTraits
             {
                 Player.GetJumpState<JusticeExtraJump>().Enable();
                 Player.GetJumpState<JusticeExtraJump2>().Enable();
+
+                // Justice Emblem: Extra double jump
+                if (Player.GetModPlayer<ImbuedEmblemPlayer>().hasJusticeEmblem)
+                {
+                    Player.GetJumpState<JusticeExtraJump3>().Enable();
+                }
             }
 
             // 5 Investment: +6% crit chance
@@ -346,7 +374,7 @@ namespace DeterministicChaos.Content.SoulTraits
             {
                 Player.GetDamage(DamageClass.Ranged) += 0.10f;
                 Player.GetDamage(DamageClass.Magic) += 0.10f;
-                Player.GetDamage(ModContent.GetInstance<Items.RangedSummonDamageClass>()) += 0.10f;
+                Player.GetDamage(ModContent.GetInstance<RangedSummonDamageClass>()) += 0.10f;
             }
         }
 
@@ -375,17 +403,27 @@ namespace DeterministicChaos.Content.SoulTraits
                 return;
                 
             float range = 400f;
+            int baseHeal = 2;
+            // Kindness Emblem: +25% healing effectiveness
+            bool hasEmblem = Player.GetModPlayer<ImbuedEmblemPlayer>().hasKindnessEmblem;
+            int healAmount = hasEmblem ? (int)(baseHeal * 1.25f) : baseHeal;
+            if (healAmount < baseHeal) healAmount = baseHeal; // Ensure at least base
             
             // Heal nearby players
             for (int i = 0; i < Main.maxPlayers; i++)
             {
                 Player other = Main.player[i];
-                if (other.active && !other.dead && other.whoAmI != Player.whoAmI && other.statLife < other.statLifeMax2)
+                if (other.active && !other.dead && other.whoAmI != Player.whoAmI)
                 {
                     if (Vector2.Distance(Player.Center, other.Center) <= range)
                     {
-                        other.statLife = Math.Min(other.statLife + 2, other.statLifeMax2);
-                        other.HealEffect(2);
+                        RoaringGunPlayer.NotifyAllyHealed(Player.whoAmI);
+                        if (other.statLife < other.statLifeMax2)
+                        {
+                            int heal = Player.GetModPlayer<PrefixEffectPlayer>().ScaleHeal(healAmount);
+                            other.statLife = Math.Min(other.statLife + heal, other.statLifeMax2);
+                            other.HealEffect(heal);
+                        }
                     }
                 }
             }
@@ -398,8 +436,8 @@ namespace DeterministicChaos.Content.SoulTraits
                 {
                     if (Vector2.Distance(Player.Center, npc.Center) <= range)
                     {
-                        npc.life = Math.Min(npc.life + 2, npc.lifeMax);
-                        npc.HealEffect(2);
+                        npc.life = Math.Min(npc.life + healAmount, npc.lifeMax);
+                        npc.HealEffect(healAmount);
                     }
                 }
             }
@@ -426,8 +464,15 @@ namespace DeterministicChaos.Content.SoulTraits
                 float maxRange = 16 * 30;
                 if (closestDist < maxRange)
                 {
-                    float speedBonus = 0.20f * (1f - closestDist / maxRange);
+                    float proximityFactor = 1f - closestDist / maxRange;
+                    float speedBonus = 0.20f * proximityFactor;
                     Player.GetAttackSpeed(DamageClass.Generic) += speedBonus;
+
+                    // Bravery Emblem: +20% weapon damage that scales with the attack speed bonus
+                    if (Player.GetModPlayer<ImbuedEmblemPlayer>().hasBraveryEmblem)
+                    {
+                        Player.GetDamage(DamageClass.Generic) += 0.20f * proximityFactor;
+                    }
                 }
             }
         }
@@ -480,10 +525,20 @@ namespace DeterministicChaos.Content.SoulTraits
 
                 // Set stealth generation rates so stealth actually regenerates
                 var stealthGenStandstill = type.GetField("stealthGenStandstill");
-                stealthGenStandstill?.SetValue(modPlayer, 0.5f);
-
                 var stealthGenMoving = type.GetField("stealthGenMoving");
-                stealthGenMoving?.SetValue(modPlayer, 0.25f);
+
+                float standstillRate = 0.5f;
+                float movingRate = 0.25f;
+
+                // Patience Emblem: +15% stealth generation
+                if (Player.GetModPlayer<ImbuedEmblemPlayer>().hasPatienceEmblem)
+                {
+                    standstillRate *= 1.15f;
+                    movingRate *= 1.15f;
+                }
+
+                stealthGenStandstill?.SetValue(modPlayer, standstillRate);
+                stealthGenMoving?.SetValue(modPlayer, movingRate);
 
                 break;
             }
@@ -586,7 +641,11 @@ namespace DeterministicChaos.Content.SoulTraits
             if (CurrentTrait == SoulTraitType.Determination && TotalInvestment >= 20 && DeterminationMarkActive)
             {
                 DeterminationMarkActive = false;
-                DeterminationCooldown = DeterminationCooldownDuration;
+                // Determination Emblem: Reduce cooldown by 30 seconds (1800 ticks)
+                int cooldown = Player.GetModPlayer<ImbuedEmblemPlayer>().hasDeterminationEmblem
+                    ? DeterminationCooldownDuration - 1800
+                    : DeterminationCooldownDuration;
+                DeterminationCooldown = cooldown;
                 Player.statLife = Player.statLifeMax2 / 2;
                 Player.Center = DeterminationSavedPosition;
                 Player.immune = true;
@@ -619,6 +678,11 @@ namespace DeterministicChaos.Content.SoulTraits
         private void ApplyKindnessMarkToAllies()
         {
             float range = 400f;
+            // Kindness Emblem: +10 seconds (600 ticks) to mark duration
+            int markDuration = Player.GetModPlayer<ImbuedEmblemPlayer>().hasKindnessEmblem
+                ? KindnessMarkDuration + 600
+                : KindnessMarkDuration;
+
             for (int i = 0; i < Main.maxPlayers; i++)
             {
                 Player other = Main.player[i];
@@ -627,7 +691,7 @@ namespace DeterministicChaos.Content.SoulTraits
                     if (other.whoAmI == Player.whoAmI || Vector2.Distance(Player.Center, other.Center) <= range)
                     {
                         var otherTraitPlayer = other.GetModPlayer<SoulTraitPlayer>();
-                        otherTraitPlayer.KindnessMarkTimer = KindnessMarkDuration;
+                        otherTraitPlayer.KindnessMarkTimer = Player.GetModPlayer<PrefixEffectPlayer>().ScaleBuffDuration(markDuration, 0);
                     }
                 }
             }
@@ -643,27 +707,29 @@ namespace DeterministicChaos.Content.SoulTraits
             // Kindness 5 Investment: Trigger defense boost (matching soul only)
             if (CurrentTrait == SoulTraitType.Kindness && TotalInvestment >= 5)
             {
-                KindnessDefenseTimer = KindnessDefenseDuration;
+                KindnessDefenseTimer = Player.GetModPlayer<PrefixEffectPlayer>().ScaleBuffDuration(KindnessDefenseDuration, 0);
                 TriggerKindnessDefenseForNearbyAllies();
             }
 
             // Bravery 12 Investment: Trigger damage boost (matching soul only)
             if (CurrentTrait == SoulTraitType.Bravery && TotalInvestment >= 12)
             {
-                BraveryDamageTimer = BraveryDamageDuration;
+                BraveryDamageTimer = Player.GetModPlayer<PrefixEffectPlayer>().ScaleBuffDuration(BraveryDamageDuration, 0);
             }
 
             // Integrity 5 Investment: Stack damage boost (matching soul only)
             if (CurrentTrait == SoulTraitType.Integrity && TotalInvestment >= 5)
             {
                 IntegrityDamageStacks = Math.Min(IntegrityDamageStacks + 1, 5);
-                IntegrityDamageTimer = IntegrityDamageDuration;
+                IntegrityDamageTimer = Player.GetModPlayer<PrefixEffectPlayer>().ScaleBuffDuration(IntegrityDamageDuration, 0);
             }
 
             // Integrity 20 Investment: Gain mark (matching soul only)
             if (CurrentTrait == SoulTraitType.Integrity && TotalInvestment >= 20)
             {
                 IntegrityMarkActive = true;
+                // Integrity Emblem: Mark lasts 3 hits instead of 1
+                IntegrityMarkHitsRemaining = Player.GetModPlayer<ImbuedEmblemPlayer>().hasIntegrityEmblem ? 3 : 1;
             }
 
             // Perseverance 20 Investment: Mark consumed on hurt (handled in ModifyHurt)
@@ -713,6 +779,14 @@ namespace DeterministicChaos.Content.SoulTraits
             {
                 modifiers.SetCrit();
                 JusticeMarkActive = false;
+
+                // Justice Emblem: Guaranteed Hypercrit (3x damage instead of 2x)
+                var emblemPlayer = Player.GetModPlayer<ImbuedEmblemPlayer>();
+                if (emblemPlayer.hasJusticeEmblem)
+                {
+                    modifiers.FinalDamage *= 1.5f;
+                    emblemPlayer.justiceMarkHypercritPending = true;
+                }
                 
                 // Sync mark state in multiplayer
                 if (Main.netMode != NetmodeID.SinglePlayer)
@@ -725,7 +799,12 @@ namespace DeterministicChaos.Content.SoulTraits
             if (CurrentTrait == SoulTraitType.Integrity && TotalInvestment >= 20 && IntegrityMarkActive)
             {
                 modifiers.FlatBonusDamage += Player.statDefense;
-                IntegrityMarkActive = false;
+                IntegrityMarkHitsRemaining--;
+                if (IntegrityMarkHitsRemaining <= 0)
+                {
+                    IntegrityMarkActive = false;
+                    IntegrityMarkHitsRemaining = 0;
+                }
             }
 
             // Kindness 20 Investment: Damage boost from mark (all souls can benefit)
@@ -760,6 +839,34 @@ namespace DeterministicChaos.Content.SoulTraits
                 BraveryMarkActive = true;
                 BraveryMarkTimer = 300;
             }
+
+            // Justice Emblem: Hypercrit VFX from Justice Mark
+            var emblemPlayer = Player.GetModPlayer<ImbuedEmblemPlayer>();
+            if (emblemPlayer.justiceMarkHypercritPending)
+            {
+                emblemPlayer.justiceMarkHypercritPending = false;
+
+                // Bright yellow burst
+                for (int i = 0; i < 25; i++)
+                {
+                    Vector2 vel = Main.rand.NextVector2CircularEdge(8f, 8f);
+                    Dust dust = Dust.NewDustPerfect(target.Center, DustID.YellowTorch, vel, 0, default, 2f);
+                    dust.noGravity = true;
+                }
+
+                // Show bright yellow combat text
+                CombatText.NewText(target.Hitbox, new Color(255, 255, 50), damageDone, dramatic: true);
+
+                // Play hypercrit sound
+                SoundEngine.PlaySound(new SoundStyle("DeterministicChaos/Assets/Sounds/Hypercrit") { Volume = 0.6f }, target.Center);
+
+                // Sheriff Hat synergy
+                var hatPlayer = Player.GetModPlayer<Armor.CowboyHatPlayer>();
+                if (hatPlayer.hasSheriffHat)
+                {
+                    hatPlayer.hypercritAttackSpeedTimer = 36;
+                }
+            }
         }
 
         private void TriggerKindnessDefenseForNearbyAllies()
@@ -775,7 +882,7 @@ namespace DeterministicChaos.Content.SoulTraits
                         var otherTraitPlayer = other.GetModPlayer<SoulTraitPlayer>();
                         if (otherTraitPlayer.CurrentTrait == SoulTraitType.Kindness && otherTraitPlayer.TotalInvestment >= 5)
                         {
-                            otherTraitPlayer.KindnessDefenseTimer = KindnessDefenseDuration;
+                            otherTraitPlayer.KindnessDefenseTimer = Player.GetModPlayer<PrefixEffectPlayer>().ScaleBuffDuration(KindnessDefenseDuration, 0);
                         }
                     }
                 }

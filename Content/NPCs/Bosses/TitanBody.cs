@@ -15,6 +15,16 @@ using System;
 using System.IO;
 using System.Collections.Generic;
 using ReLogic.Content;
+using DeterministicChaos.Content.Items.Accessories;
+using DeterministicChaos.Content.Items.BossBags;
+using DeterministicChaos.Content.Items.BossSummons;
+using DeterministicChaos.Content.Items.Consumables;
+using DeterministicChaos.Content.Items.DamageClasses;
+using DeterministicChaos.Content.Items.Globals;
+using DeterministicChaos.Content.Items.Materials;
+using DeterministicChaos.Content.Items.Placeable;
+using DeterministicChaos.Content.Items.Rarities;
+using DeterministicChaos.Content.Items.Weapons;
 
 namespace DeterministicChaos.Content.NPCs.Bosses
 {
@@ -1559,8 +1569,8 @@ namespace DeterministicChaos.Content.NPCs.Bosses
         public override void ModifyNPCLoot(NPCLoot npcLoot)
         {
             // Boss bag (Expert/Master/Revengeance/Death)
-            var bagRule = new LeadingConditionRule(new Items.BagDropCondition());
-            bagRule.OnSuccess(ItemDropRule.Common(ModContent.ItemType<Items.TitanBossBag>()));
+            var bagRule = new LeadingConditionRule(new BagDropCondition());
+            bagRule.OnSuccess(ItemDropRule.Common(ModContent.ItemType<TitanBossBag>()));
             npcLoot.Add(bagRule);
 
             // Trophy (10% chance on any difficulty)
@@ -1570,21 +1580,21 @@ namespace DeterministicChaos.Content.NPCs.Bosses
             npcLoot.Add(ItemDropRule.MasterModeCommonDrop(ModContent.ItemType<Trophies.TitanRelic>()));
 
             // Normal mode direct drops (bag handles Expert+/Rev+)
-            var directDrop = new LeadingConditionRule(new Items.DirectDropCondition());
+            var directDrop = new LeadingConditionRule(new DirectDropCondition());
 
-            directDrop.OnSuccess(new Items.PickTwoDropRule(
-                ModContent.ItemType<Items.ForthcomingWrath>(),
-                ModContent.ItemType<Items.LodestoneFork>(),
-                ModContent.ItemType<Items.Cascade>(),
-                ModContent.ItemType<Items.ShatteredGlass>(),
-                ModContent.ItemType<Items.Leyline>(),
-                ModContent.ItemType<Items.Appendage>()));
+            directDrop.OnSuccess(new PickTwoDropRule(
+                ModContent.ItemType<ForthcomingWrath>(),
+                ModContent.ItemType<LodestoneFork>(),
+                ModContent.ItemType<Cascade>(),
+                ModContent.ItemType<ShatteredGlass>(),
+                ModContent.ItemType<Leyline>(),
+                ModContent.ItemType<Appendage>()));
 
-            directDrop.OnSuccess(ItemDropRule.OneFromOptions(1, ModContent.ItemType<Items.TitanicEmblem>()));
-            directDrop.OnSuccess(ItemDropRule.Common(ModContent.ItemType<Items.TitanStar>(), 4));
+            directDrop.OnSuccess(ItemDropRule.OneFromOptions(1, ModContent.ItemType<TitanicEmblem>()));
+            directDrop.OnSuccess(ItemDropRule.Common(ModContent.ItemType<Items.Accessories.TitanStar>(), 4));
 
             // Titansblood (15-30)
-            directDrop.OnSuccess(ItemDropRule.Common(ModContent.ItemType<Items.Titansblood>(), 1, 15, 30));
+            directDrop.OnSuccess(ItemDropRule.Common(ModContent.ItemType<Titansblood>(), 1, 15, 30));
 
             npcLoot.Add(directDrop);
         }

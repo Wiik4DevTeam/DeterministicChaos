@@ -5,11 +5,11 @@ using Terraria.ModLoader;
 
 namespace DeterministicChaos.Content.Projectiles.Friendly
 {
-    /// <summary>
-    /// Invisible shockwave hitbox spawned alongside ClubEarthquakeProjectile.
-    /// Deals full damage and launches enemies upward on contact.
-    /// ai[0] = spawn delay (matches the visual club's delay).
-    /// </summary>
+    
+    // Invisible shockwave hitbox spawned alongside ClubEarthquakeProjectile.
+    // Deals full damage and launches enemies upward on contact.
+    // ai[0] = spawn delay (matches the visual club's delay).
+    
     public class ClubEarthquakeHitbox : ModProjectile
     {
         public override string Texture => "DeterministicChaos/Content/Projectiles/Friendly/FriendlyClubProjectile";

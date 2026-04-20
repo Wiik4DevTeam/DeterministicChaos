@@ -6,6 +6,19 @@ using Terraria.Audio;
 using Terraria.GameContent;
 using Terraria.ID;
 using Terraria.ModLoader;
+using DeterministicChaos.Content.Items.Prefixes;
+using DeterministicChaos.Content.Items;
+using DeterministicChaos.Content.Items.Accessories;
+using DeterministicChaos.Content.Items.BossBags;
+using DeterministicChaos.Content.Items.BossSummons;
+using DeterministicChaos.Content.Items.Consumables;
+using DeterministicChaos.Content.Items.DamageClasses;
+using DeterministicChaos.Content.Items.Globals;
+using DeterministicChaos.Content.Items.Materials;
+using DeterministicChaos.Content.Items.Placeable;
+using DeterministicChaos.Content.Items.Rarities;
+using DeterministicChaos.Content.Items.Weapons;
+using DeterministicChaos.Content.Items.Imbued;
 
 namespace DeterministicChaos.Content.Projectiles.Friendly
 {
@@ -137,11 +150,18 @@ namespace DeterministicChaos.Content.Projectiles.Friendly
             Projectile.ai[0] = 1f;
             Projectile.netUpdate = true;
 
+            RoaringGunPlayer.NotifyAllyHealed(Projectile.owner);
+
             // Only heal if player needs healing
             if (player.statLife < player.statLifeMax2)
             {
-                player.HealEffect(HealAmount);
-                player.statLife += HealAmount;
+                int baseHeal = HealAmount;
+                bool hasEmblem = player.GetModPlayer<ImbuedEmblemPlayer>().hasKindnessEmblem;
+                int scaledHeal = hasEmblem ? (int)(baseHeal * 1.25f) : baseHeal;
+                if (scaledHeal < baseHeal) scaledHeal = baseHeal;
+                int heal = player.GetModPlayer<PrefixEffectPlayer>().ScaleHeal(scaledHeal);
+                player.HealEffect(heal);
+                player.statLife += heal;
                 if (player.statLife > player.statLifeMax2)
                     player.statLife = player.statLifeMax2;
             }
